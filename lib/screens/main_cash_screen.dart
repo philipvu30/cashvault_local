@@ -7,8 +7,10 @@ import '../widgets/app_card.dart';
 import '../widgets/cash_entry_table.dart';
 import '../widgets/export_csv_dialog.dart';
 import '../widgets/money_input_field.dart';
+import '../widgets/new_session_dialog.dart';
 import '../widgets/owner_password_setup_dialog.dart';
 import '../widgets/password_dialog.dart';
+import '../widgets/reopen_session_dialog.dart';
 import '../widgets/session_header.dart';
 import '../widgets/summary_panel.dart';
 
@@ -73,7 +75,31 @@ class _MainCashScreenState extends State<MainCashScreen> {
                 children: <Widget>[
                   AppCard(
                     title: 'Current Session',
-                    child: SessionHeader(session: session),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        SessionHeader(session: session),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: <Widget>[
+                            OutlinedButton(
+                              onPressed: () => _startNewSession(context, appState),
+                              child: const Text('Start New Session'),
+                            ),
+                            OutlinedButton(
+                              onPressed: session.isOpen ? () => _closeCurrentSession(context, appState) : null,
+                              child: const Text('Close Current Session'),
+                            ),
+                            OutlinedButton(
+                              onPressed: () => _reopenSession(context, appState),
+                              child: const Text('Reopen Previous Session'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 16),
                   AppCard(
@@ -120,20 +146,10 @@ class _MainCashScreenState extends State<MainCashScreen> {
                           moneyFormatService: appState.moneyFormatService,
                           moneyParserService: appState.moneyParserService,
                           onQuantityChanged: appState.updateRowQuantity,
-                          onCommentChanged: appState.updateRowComment,
                           onLabelChanged: appState.updateCustomRowLabel,
                           onAmountChanged: appState.updateCustomRowAmount,
                           onDeleteRow: appState.removeCustomRow,
                           readOnly: !session.isOpen,
-                        ),
-                        const SizedBox(height: 8),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: OutlinedButton.icon(
-                            onPressed: !session.isOpen ? null : () => appState.addCustomRow('cash'),
-                            icon: const Icon(Icons.add),
-                            label: const Text('Custom Cash Row'),
-                          ),
                         ),
                       ],
                     ),
@@ -149,7 +165,6 @@ class _MainCashScreenState extends State<MainCashScreen> {
                           moneyFormatService: appState.moneyFormatService,
                           moneyParserService: appState.moneyParserService,
                           onQuantityChanged: appState.updateRowQuantity,
-                          onCommentChanged: appState.updateRowComment,
                           onLabelChanged: appState.updateCustomRowLabel,
                           onAmountChanged: appState.updateCustomRowAmount,
                           onDeleteRow: appState.removeCustomRow,
@@ -217,6 +232,55 @@ class _MainCashScreenState extends State<MainCashScreen> {
     );
     if (result == null) return;
     await appState.createOwnerPassword(result.password, result.confirmPassword);
+  }
+
+  Future<void> _startNewSession(BuildContext context, AppState appState) async {
+    final auth = await _askOwnerPassword(context, appState);
+    if (!auth) return;
+    final result = await showDialog<NewSessionDialogResult>(
+      context: context,
+      builder: (_) => NewSessionDialog(
+        parser: appState.moneyParserService,
+        defaultStartingBalanceCents: appState.summary.finalTotalCents,
+      ),
+    );
+    if (result == null) return;
+    await appState.startNewSession(
+      sessionName: result.sessionName,
+      businessDate: result.businessDate,
+      startingBalanceCents: result.startingBalanceCents,
+    );
+  }
+
+  Future<void> _closeCurrentSession(BuildContext context, AppState appState) async {
+    final auth = await _askOwnerPassword(context, appState);
+    if (!auth) return;
+    await appState.closeCurrentSession();
+  }
+
+  Future<void> _reopenSession(BuildContext context, AppState appState) async {
+    final auth = await _askOwnerPassword(context, appState);
+    if (!auth) return;
+    final sessions = await appState.allSessions();
+    final selectedId = await showDialog<int?>(
+      context: context,
+      builder: (_) => ReopenSessionDialog(sessions: sessions),
+    );
+    if (selectedId == null) return;
+    await appState.reopenSession(selectedId);
+  }
+
+  Future<bool> _askOwnerPassword(BuildContext context, AppState appState) async {
+    final password = await showDialog<String?>(
+      context: context,
+      builder: (_) => const PasswordDialog(),
+    );
+    if (password == null) return false;
+    final ok = await appState.verifyOwnerPassword(password);
+    if (!ok && context.mounted) {
+      _showSnack(context, 'Invalid owner password');
+    }
+    return ok;
   }
 
   Future<void> _showExportDialog(BuildContext context, AppState appState) async {

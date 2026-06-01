@@ -11,7 +11,6 @@ class CashEntryRow extends StatelessWidget {
     required this.moneyFormatService,
     required this.moneyParserService,
     required this.onQuantityChanged,
-    required this.onCommentChanged,
     required this.onLabelChanged,
     required this.onAmountChanged,
     required this.onDelete,
@@ -22,7 +21,6 @@ class CashEntryRow extends StatelessWidget {
   final MoneyFormatService moneyFormatService;
   final MoneyParserService moneyParserService;
   final ValueChanged<int> onQuantityChanged;
-  final ValueChanged<String> onCommentChanged;
   final ValueChanged<String> onLabelChanged;
   final ValueChanged<int> onAmountChanged;
   final VoidCallback? onDelete;
@@ -76,16 +74,6 @@ class CashEntryRow extends StatelessWidget {
             child: Text(
               moneyFormatService.formatCents(row.rowTotalCents),
               textAlign: TextAlign.right,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            flex: 3,
-            child: TextFormField(
-              initialValue: row.comment,
-              enabled: !isReadOnly,
-              decoration: const InputDecoration(labelText: 'Comment'),
-              onChanged: onCommentChanged,
             ),
           ),
           if (row.isCustom) ...<Widget>[

@@ -12,7 +12,6 @@ class CashEntryTable extends StatelessWidget {
     required this.moneyFormatService,
     required this.moneyParserService,
     required this.onQuantityChanged,
-    required this.onCommentChanged,
     required this.onLabelChanged,
     required this.onAmountChanged,
     required this.onDeleteRow,
@@ -23,7 +22,6 @@ class CashEntryTable extends StatelessWidget {
   final MoneyFormatService moneyFormatService;
   final MoneyParserService moneyParserService;
   final void Function(CashEntryDraft row, int value) onQuantityChanged;
-  final void Function(CashEntryDraft row, String value) onCommentChanged;
   final void Function(CashEntryDraft row, String value) onLabelChanged;
   final void Function(CashEntryDraft row, int value) onAmountChanged;
   final void Function(CashEntryDraft row) onDeleteRow;
@@ -42,8 +40,6 @@ class CashEntryTable extends StatelessWidget {
             Expanded(child: Text('Qty', style: TextStyle(fontWeight: FontWeight.bold))),
             SizedBox(width: 8),
             Expanded(flex: 2, child: Text('Total', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold))),
-            SizedBox(width: 8),
-            Expanded(flex: 3, child: Text('Comment', style: TextStyle(fontWeight: FontWeight.bold))),
           ],
         ),
         const SizedBox(height: 8),
@@ -53,7 +49,6 @@ class CashEntryTable extends StatelessWidget {
             moneyFormatService: moneyFormatService,
             moneyParserService: moneyParserService,
             onQuantityChanged: (value) => onQuantityChanged(row, value),
-            onCommentChanged: (value) => onCommentChanged(row, value),
             onLabelChanged: (value) => onLabelChanged(row, value),
             onAmountChanged: (value) => onAmountChanged(row, value),
             onDelete: () => onDeleteRow(row),

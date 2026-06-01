@@ -88,7 +88,6 @@ class AppState extends ChangeNotifier {
     needsOwnerPasswordSetup = !hasPassword;
 
     activeSession = await _sessionService!.ensureFirstSession();
-    await _ensureDefaultPresets();
     await refresh();
 
     isReady = true;
@@ -358,32 +357,6 @@ class AppState extends ChangeNotifier {
   }
 
   Future<List<CashSessionModel>> allSessions() => _sessionService!.allSessions();
-
-  Future<void> _ensureDefaultPresets() async {
-    final presets = await _denominationPresetService!.getAll();
-    if (presets.isNotEmpty) return;
-
-    final defaults = <Map<String, Object>>[
-      <String, Object>{'type': 'cash', 'label': '\$100 Note', 'amount': 10000, 'sort': 1},
-      <String, Object>{'type': 'cash', 'label': '\$50 Note', 'amount': 5000, 'sort': 2},
-      <String, Object>{'type': 'cash', 'label': '\$20 Note', 'amount': 2000, 'sort': 3},
-      <String, Object>{'type': 'cash', 'label': '\$10 Note', 'amount': 1000, 'sort': 4},
-      <String, Object>{'type': 'coin', 'label': '\$1 Coin', 'amount': 100, 'sort': 1},
-      <String, Object>{'type': 'coin', 'label': '25c Coin', 'amount': 25, 'sort': 2},
-      <String, Object>{'type': 'coin', 'label': '10c Coin', 'amount': 10, 'sort': 3},
-      <String, Object>{'type': 'coin', 'label': '5c Coin', 'amount': 5, 'sort': 4},
-    ];
-
-    for (final row in defaults) {
-      await _denominationPresetService!.createPreset(
-        entryType: row['type'] as String,
-        label: row['label'] as String,
-        amountCents: row['amount'] as int,
-        sortOrder: row['sort'] as int,
-        isActive: true,
-      );
-    }
-  }
 
   void _buildRowsFromPresetsAndSaved(List<CashEntryModel> savedModels) {
     final session = activeSession;

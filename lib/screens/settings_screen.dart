@@ -5,9 +5,7 @@ import '../models/denomination_preset_model.dart';
 import '../state/app_state.dart';
 import '../widgets/change_password_dialog.dart';
 import '../widgets/denomination_preset_editor_dialog.dart';
-import '../widgets/new_session_dialog.dart';
 import '../widgets/password_dialog.dart';
-import '../widgets/reopen_session_dialog.dart';
 import '../widgets/settings_section_card.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -17,7 +15,6 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<AppState>(
       builder: (context, appState, _) {
-        final session = appState.activeSession;
         return Scaffold(
           appBar: AppBar(
             title: const Text('Settings'),
@@ -33,7 +30,7 @@ class SettingsScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 children: <Widget>[
                   Text(
-                    'Manage security, database, labels, sessions, and app preferences.',
+                    'Manage owner password, export defaults, and reusable labels shown on Main Cash Screen.',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 16),
@@ -52,41 +49,14 @@ class SettingsScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const SettingsSectionCard(
-                    title: 'Starting Balance Protection',
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text('Starting balance editing requires owner password.'),
-                        SizedBox(height: 8),
-                        Text('Status: Enabled'),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  SettingsSectionCard(
-                    title: 'Database',
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        const Text('Storage Mode: Local Only'),
-                        const Text('Database Encryption: Enabled'),
-                        const Text('Database Location: App Folder'),
-                        const SizedBox(height: 8),
-                        OutlinedButton(
-                          onPressed: () => _snack(context, 'Database status: local encrypted SQLite active'),
-                          child: const Text('Show Database Status'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
                   SettingsSectionCard(
                     title: 'Export Settings',
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        Text('Last Export Folder: ${appState.lastExportFolder?.isNotEmpty == true ? appState.lastExportFolder : 'Not Set'}'),
+                        Text(
+                          'Last Export Folder: ${appState.lastExportFolder?.isNotEmpty == true ? appState.lastExportFolder : 'Not Set'}',
+                        ),
                         const SizedBox(height: 8),
                         OutlinedButton(
                           onPressed: () async => appState.pickExportFolder(),
@@ -119,50 +89,6 @@ class SettingsScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  SettingsSectionCard(
-                    title: 'Sessions',
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text('Current Session: ${session?.sessionName ?? '-'}'),
-                        Text('Business Date: ${session?.businessDate ?? '-'}'),
-                        Text('Status: ${session?.status ?? '-'}'),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: <Widget>[
-                            OutlinedButton(
-                              onPressed: () => _startNewSession(context, appState),
-                              child: const Text('Start New Session'),
-                            ),
-                            OutlinedButton(
-                              onPressed: session == null ? null : () => _closeCurrentSession(context, appState),
-                              child: const Text('Close Current Session'),
-                            ),
-                            OutlinedButton(
-                              onPressed: () => _reopenSession(context, appState),
-                              child: const Text('Reopen Previous Session'),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  SettingsSectionCard(
-                    title: 'App Info',
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        const Text('App Name: CashVault Local'),
-                        const Text('Version: 1.0.0'),
-                        const Text('Platform: Windows'),
-                        Text('Database Created: ${appState.databaseCreatedAt ?? '-'}'),
-                      ],
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -185,7 +111,10 @@ class SettingsScreen extends StatelessWidget {
         Row(
           children: <Widget>[
             Expanded(
-              child: Text(title, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+              child: Text(
+                title,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              ),
             ),
             OutlinedButton.icon(
               onPressed: () => _editPreset(context, appState, type: type, preset: null),
@@ -205,6 +134,11 @@ class SettingsScreen extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 6),
+        if (presets.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text('No labels yet. Add first label.'),
+          ),
         ...presets.map(
           (preset) => Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
@@ -249,7 +183,6 @@ class SettingsScreen extends StatelessWidget {
       newPassword: data.newPassword,
       confirmPassword: data.confirmPassword,
     );
-    if (!context.mounted) return;
     _snack(context, ok ? 'Owner password updated' : 'Failed to update owner password');
   }
 
@@ -261,7 +194,6 @@ class SettingsScreen extends StatelessWidget {
   }) async {
     final auth = await _askOwnerPassword(context, appState);
     if (!auth) return;
-    if (!context.mounted) return;
     final result = await showDialog<DenominationPresetEditorResult>(
       context: context,
       builder: (_) => DenominationPresetEditorDialog(
@@ -271,7 +203,6 @@ class SettingsScreen extends StatelessWidget {
       ),
     );
     if (result == null) return;
-    if (!context.mounted) return;
     await appState.createOrUpdatePreset(
       id: preset?.id,
       entryType: result.entryType,
@@ -292,48 +223,6 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _startNewSession(BuildContext context, AppState appState) async {
-    final auth = await _askOwnerPassword(context, appState);
-    if (!auth) return;
-    if (!context.mounted) return;
-    final result = await showDialog<NewSessionDialogResult>(
-      context: context,
-      builder: (_) => NewSessionDialog(
-        parser: appState.moneyParserService,
-        defaultStartingBalanceCents: appState.summary.finalTotalCents,
-      ),
-    );
-    if (result == null) return;
-    if (!context.mounted) return;
-    await appState.startNewSession(
-      sessionName: result.sessionName,
-      businessDate: result.businessDate,
-      startingBalanceCents: result.startingBalanceCents,
-    );
-    if (context.mounted) Navigator.of(context).pop();
-  }
-
-  Future<void> _closeCurrentSession(BuildContext context, AppState appState) async {
-    final auth = await _askOwnerPassword(context, appState);
-    if (!auth) return;
-    await appState.closeCurrentSession();
-  }
-
-  Future<void> _reopenSession(BuildContext context, AppState appState) async {
-    final auth = await _askOwnerPassword(context, appState);
-    if (!auth) return;
-    final sessions = await appState.allSessions();
-    if (!context.mounted) return;
-    final selectedId = await showDialog<int?>(
-      context: context,
-      builder: (_) => ReopenSessionDialog(sessions: sessions),
-    );
-    if (selectedId == null) return;
-    if (!context.mounted) return;
-    await appState.reopenSession(selectedId);
-    if (context.mounted) Navigator.of(context).pop();
-  }
-
   Future<bool> _askOwnerPassword(BuildContext context, AppState appState) async {
     final password = await showDialog<String?>(
       context: context,
@@ -341,7 +230,7 @@ class SettingsScreen extends StatelessWidget {
     );
     if (password == null) return false;
     final ok = await appState.verifyOwnerPassword(password);
-    if (!ok) return false;
+    if (!ok && context.mounted) _snack(context, 'Invalid owner password');
     return ok;
   }
 

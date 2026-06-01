@@ -23,19 +23,21 @@ class _ReopenSessionDialogState extends State<ReopenSessionDialog> {
       title: const Text('Reopen Previous Session'),
       content: SizedBox(
         width: 480,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: widget.sessions
-              .map(
-                (session) => RadioListTile<int>(
-                  value: session.id,
-                  groupValue: selectedId,
-                  onChanged: (value) => setState(() => selectedId = value),
-                  title: Text(session.sessionName),
-                  subtitle: Text('${session.businessDate} • ${session.status}'),
-                ),
-              )
-              .toList(),
+        child: RadioGroup<int>(
+          groupValue: selectedId,
+          onChanged: (value) => setState(() => selectedId = value),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: widget.sessions
+                .map(
+                  (session) => RadioListTile<int>(
+                    value: session.id,
+                    title: Text(session.sessionName),
+                    subtitle: Text('${session.businessDate} • ${session.status}'),
+                  ),
+                )
+                .toList(),
+          ),
         ),
       ),
       actions: <Widget>[

@@ -74,7 +74,7 @@ class _DenominationPresetEditorDialogState extends State<DenominationPresetEdito
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             DropdownButtonFormField<String>(
-              value: _entryType,
+              initialValue: _entryType,
               decoration: const InputDecoration(labelText: 'Entry Type'),
               items: const <DropdownMenuItem<String>>[
                 DropdownMenuItem(value: 'cash', child: Text('cash')),

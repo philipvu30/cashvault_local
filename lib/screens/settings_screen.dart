@@ -249,6 +249,7 @@ class SettingsScreen extends StatelessWidget {
       newPassword: data.newPassword,
       confirmPassword: data.confirmPassword,
     );
+    if (!context.mounted) return;
     _snack(context, ok ? 'Owner password updated' : 'Failed to update owner password');
   }
 
@@ -260,6 +261,7 @@ class SettingsScreen extends StatelessWidget {
   }) async {
     final auth = await _askOwnerPassword(context, appState);
     if (!auth) return;
+    if (!context.mounted) return;
     final result = await showDialog<DenominationPresetEditorResult>(
       context: context,
       builder: (_) => DenominationPresetEditorDialog(
@@ -269,6 +271,7 @@ class SettingsScreen extends StatelessWidget {
       ),
     );
     if (result == null) return;
+    if (!context.mounted) return;
     await appState.createOrUpdatePreset(
       id: preset?.id,
       entryType: result.entryType,
@@ -292,6 +295,7 @@ class SettingsScreen extends StatelessWidget {
   Future<void> _startNewSession(BuildContext context, AppState appState) async {
     final auth = await _askOwnerPassword(context, appState);
     if (!auth) return;
+    if (!context.mounted) return;
     final result = await showDialog<NewSessionDialogResult>(
       context: context,
       builder: (_) => NewSessionDialog(
@@ -300,6 +304,7 @@ class SettingsScreen extends StatelessWidget {
       ),
     );
     if (result == null) return;
+    if (!context.mounted) return;
     await appState.startNewSession(
       sessionName: result.sessionName,
       businessDate: result.businessDate,
@@ -318,11 +323,13 @@ class SettingsScreen extends StatelessWidget {
     final auth = await _askOwnerPassword(context, appState);
     if (!auth) return;
     final sessions = await appState.allSessions();
+    if (!context.mounted) return;
     final selectedId = await showDialog<int?>(
       context: context,
       builder: (_) => ReopenSessionDialog(sessions: sessions),
     );
     if (selectedId == null) return;
+    if (!context.mounted) return;
     await appState.reopenSession(selectedId);
     if (context.mounted) Navigator.of(context).pop();
   }
@@ -334,7 +341,7 @@ class SettingsScreen extends StatelessWidget {
     );
     if (password == null) return false;
     final ok = await appState.verifyOwnerPassword(password);
-    if (!ok && context.mounted) _snack(context, 'Invalid owner password');
+    if (!ok) return false;
     return ok;
   }
 

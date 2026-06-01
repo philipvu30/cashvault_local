@@ -41,7 +41,7 @@ class AppState extends ChangeNotifier {
   bool isReady = false;
   bool needsOwnerPasswordSetup = false;
   bool isSaving = false;
-  int? activeSessionEftPosDraftCents;
+  String? activeSessionEftPosDraftText;
 
   CashSessionModel? activeSession;
   List<CashEntryDraft> cashRows = <CashEntryDraft>[];
@@ -80,6 +80,7 @@ class AppState extends ChangeNotifier {
       appSettingsRepository: _appSettingsRepository!,
       auditLogRepository: _auditLogRepository!,
       moneyFormatService: moneyFormatService,
+      moneyParserService: moneyParserService,
     );
 
     await _appSettingsRepository!.ensureDefaultSettings();
@@ -108,7 +109,7 @@ class AppState extends ChangeNotifier {
     if (activeSession != null) {
       final saved = await _cashEntriesRepository!.getBySessionId(activeSession!.id);
       _buildRowsFromPresetsAndSaved(saved);
-      activeSessionEftPosDraftCents = activeSession!.eftPosCents;
+      activeSessionEftPosDraftText = activeSession!.eftPosText;
     }
 
     notifyListeners();
@@ -189,8 +190,8 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void updateActiveSessionEftPosDraft(int cents) {
-    activeSessionEftPosDraftCents = cents < 0 ? 0 : cents;
+  void updateActiveSessionEftPosDraft(String value) {
+    activeSessionEftPosDraftText = value;
     notifyListeners();
   }
 
@@ -205,7 +206,7 @@ class AppState extends ChangeNotifier {
         totalCoinCents: totalCoinCents,
       );
 
-  Future<void> saveSessionData({int? editedEftPosCents}) async {
+  Future<void> saveSessionData({String? editedEftPosText}) async {
     final session = activeSession;
     if (session == null || !session.isOpen) return;
 
@@ -214,11 +215,12 @@ class AppState extends ChangeNotifier {
     notifyListeners();
 
     try {
-      if (editedEftPosCents != null) {
-        if (editedEftPosCents < 0) {
-          throw ArgumentError('EFT POS must be non-negative');
+      if (editedEftPosText != null) {
+        final normalized = moneyParserService.tryNormalizeMoneyText(editedEftPosText);
+        if (normalized == null) {
+          throw ArgumentError('Invalid EFT POS format');
         }
-        await _cashSessionsRepository!.updateEftPos(session.id, editedEftPosCents);
+        await _cashSessionsRepository!.updateEftPosText(session.id, normalized);
       }
 
       final merged = <CashEntryDraft>[...cashRows, ...coinRows];
@@ -231,7 +233,7 @@ class AppState extends ChangeNotifier {
           .toList();
 
       await _cashEntriesRepository!.replaceForSession(session.id, validRows);
-      activeSessionEftPosDraftCents = editedEftPosCents ?? activeSessionEftPosDraftCents;
+      activeSessionEftPosDraftText = editedEftPosText ?? activeSessionEftPosDraftText;
       await refresh();
     } catch (e) {
       errorMessage = e.toString();
@@ -340,7 +342,7 @@ class AppState extends ChangeNotifier {
       businessDate: businessDate,
       startingBalanceCents: startingBalanceCents,
     );
-    activeSessionEftPosDraftCents = 0;
+    activeSessionEftPosDraftText = '0.00';
     await refresh();
   }
 
@@ -367,7 +369,7 @@ class AppState extends ChangeNotifier {
     required String sessionName,
     required String businessDate,
     required int startingBalanceCents,
-    required int eftPosCents,
+    required String eftPosText,
     required List<CashEntryModel> entries,
   }) async {
     await _cashSessionsRepository!.updateSessionFields(
@@ -375,7 +377,7 @@ class AppState extends ChangeNotifier {
       sessionName: sessionName,
       businessDate: businessDate,
       startingBalanceCents: startingBalanceCents,
-      eftPosCents: eftPosCents,
+      eftPosText: eftPosText,
     );
     await _cashEntriesRepository!.replaceForSession(sessionId, entries);
   }

@@ -44,7 +44,7 @@ class _MainCashScreenState extends State<MainCashScreen> {
           return const Scaffold(body: Center(child: Text('No active session')));
         }
         final canStartNewSession = !_isSameDate(session.createdAt, DateTime.now());
-        final eftPosText = _editableMoney(appState.activeSessionEftPosDraftCents ?? session.eftPosCents);
+        final eftPosText = appState.activeSessionEftPosDraftText ?? session.eftPosText;
         if (_eftPosController.text != eftPosText) {
           _eftPosController.text = eftPosText;
         }
@@ -82,8 +82,7 @@ class _MainCashScreenState extends State<MainCashScreen> {
                         onPressed: !session.isOpen || appState.isSaving
                             ? null
                             : () async {
-                                final eftCents = appState.moneyParserService.tryParseToCents(_eftPosController.text);
-                                await appState.saveSessionData(editedEftPosCents: eftCents);
+                                await appState.saveSessionData(editedEftPosText: _eftPosController.text);
                                 if (!context.mounted) return;
                                 if (appState.errorMessage == null) {
                                   _showSnack(context, 'Session saved');
@@ -145,10 +144,7 @@ class _MainCashScreenState extends State<MainCashScreen> {
                             prefixText: '\$',
                           ),
                           onChanged: (value) {
-                            final cents = appState.moneyParserService.tryParseToCents(value);
-                            if (cents != null) {
-                              appState.updateActiveSessionEftPosDraft(cents);
-                            }
+                            appState.updateActiveSessionEftPosDraft(value);
                           },
                         ),
                       ],
@@ -161,6 +157,7 @@ class _MainCashScreenState extends State<MainCashScreen> {
                     child: Column(
                       children: <Widget>[
                         CashEntryTable(
+                          key: ValueKey<String>('cash-${session.id}'),
                           rows: appState.cashRows,
                           moneyFormatService: appState.moneyFormatService,
                           moneyParserService: appState.moneyParserService,
@@ -180,6 +177,7 @@ class _MainCashScreenState extends State<MainCashScreen> {
                     child: Column(
                       children: <Widget>[
                         CashEntryTable(
+                          key: ValueKey<String>('coin-${session.id}'),
                           rows: appState.coinRows,
                           moneyFormatService: appState.moneyFormatService,
                           moneyParserService: appState.moneyParserService,
@@ -225,10 +223,18 @@ class _MainCashScreenState extends State<MainCashScreen> {
       builder: (_) => const NewSessionDialog(),
     );
     if (result == null) return;
-    await appState.startNewSession(
-      sessionName: result.sessionName,
-      businessDate: result.businessDate,
-    );
+    try {
+      await appState.startNewSession(
+        sessionName: result.sessionName,
+        businessDate: result.businessDate,
+      );
+      if (!context.mounted) return;
+      _showSnack(context, 'New session started');
+    } catch (e) {
+      if (context.mounted) {
+        _showSnack(context, e.toString());
+      }
+    }
   }
 
   Future<void> _closeCurrentSession(BuildContext context, AppState appState) async {
@@ -262,12 +268,6 @@ class _MainCashScreenState extends State<MainCashScreen> {
 
   String _sanitizeSessionName(String value) {
     return value.trim().replaceAll(RegExp(r'\s+'), '-').replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '');
-  }
-
-  String _editableMoney(int cents) {
-    final dollars = cents ~/ 100;
-    final remains = cents % 100;
-    return '$dollars.${remains.toString().padLeft(2, '0')}';
   }
 
   bool _isSameDate(DateTime a, DateTime b) {

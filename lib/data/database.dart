@@ -61,6 +61,7 @@ class AppDatabase extends GeneratedDatabase {
         business_date TEXT NOT NULL,
         starting_balance_cents INTEGER NOT NULL,
         eft_pos_cents INTEGER NOT NULL DEFAULT 0,
+        eft_pos_text TEXT NOT NULL DEFAULT '0.00',
         status TEXT NOT NULL,
         created_at TEXT NOT NULL,
         closed_at TEXT
@@ -114,6 +115,7 @@ class AppDatabase extends GeneratedDatabase {
 
   Future<void> _ensureLegacyCompatibility() async {
     await _ensureCashSessionsEftPosColumn();
+    await _ensureCashSessionsEftPosTextColumn();
     await _migrateCashEntriesWithoutSessionId();
   }
 
@@ -125,6 +127,32 @@ class AppDatabase extends GeneratedDatabase {
       await customStatement(
         'ALTER TABLE cash_sessions ADD COLUMN eft_pos_cents INTEGER NOT NULL DEFAULT 0;',
       );
+    }
+  }
+
+  Future<void> _ensureCashSessionsEftPosTextColumn() async {
+    final columns = await selectMaps("PRAGMA table_info('cash_sessions')");
+    if (columns.isEmpty) return;
+    final names = columns.map((row) => row['name'] as String).toSet();
+    var added = false;
+    if (!names.contains('eft_pos_text')) {
+      await customStatement(
+        "ALTER TABLE cash_sessions ADD COLUMN eft_pos_text TEXT NOT NULL DEFAULT '0.00';",
+      );
+      added = true;
+    }
+
+    if (added) {
+      await customStatement('''
+        UPDATE cash_sessions
+        SET eft_pos_text = printf('%d.%02d', eft_pos_cents / 100, abs(eft_pos_cents % 100));
+      ''');
+    } else {
+      await customStatement('''
+        UPDATE cash_sessions
+        SET eft_pos_text = printf('%d.%02d', eft_pos_cents / 100, abs(eft_pos_cents % 100))
+        WHERE eft_pos_text IS NULL OR trim(eft_pos_text) = '';
+      ''');
     }
   }
 

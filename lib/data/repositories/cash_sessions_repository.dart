@@ -9,7 +9,7 @@ class CashSessionsRepository {
   Future<CashSessionModel?> getById(int id) async {
     final rows = await _database.selectMaps(
       '''
-      SELECT id, session_name, business_date, starting_balance_cents, eft_pos_cents, status, created_at, closed_at
+      SELECT id, session_name, business_date, starting_balance_cents, eft_pos_cents, eft_pos_text, status, created_at, closed_at
       FROM cash_sessions
       WHERE id = ?
       LIMIT 1
@@ -23,7 +23,7 @@ class CashSessionsRepository {
   Future<CashSessionModel?> getOpenSession() async {
     final rows = await _database.selectMaps(
       '''
-      SELECT id, session_name, business_date, starting_balance_cents, eft_pos_cents, status, created_at, closed_at
+      SELECT id, session_name, business_date, starting_balance_cents, eft_pos_cents, eft_pos_text, status, created_at, closed_at
       FROM cash_sessions
       WHERE status = 'open'
       ORDER BY created_at DESC
@@ -37,7 +37,7 @@ class CashSessionsRepository {
   Future<List<CashSessionModel>> getAllSessions() async {
     final rows = await _database.selectMaps(
       '''
-      SELECT id, session_name, business_date, starting_balance_cents, eft_pos_cents, status, created_at, closed_at
+      SELECT id, session_name, business_date, starting_balance_cents, eft_pos_cents, eft_pos_text, status, created_at, closed_at
       FROM cash_sessions
       ORDER BY created_at DESC
       ''',
@@ -49,19 +49,20 @@ class CashSessionsRepository {
     required String sessionName,
     required String businessDate,
     required int startingBalanceCents,
-    int eftPosCents = 0,
+    String eftPosText = '0.00',
   }) async {
     return _database.insert(
       '''
       INSERT INTO cash_sessions (
-        session_name, business_date, starting_balance_cents, eft_pos_cents, status, created_at, closed_at
-      ) VALUES (?, ?, ?, ?, 'open', ?, NULL)
+        session_name, business_date, starting_balance_cents, eft_pos_cents, eft_pos_text, status, created_at, closed_at
+      ) VALUES (?, ?, ?, ?, ?, 'open', ?, NULL)
       ''',
       <Object?>[
         sessionName,
         businessDate,
         startingBalanceCents,
-        eftPosCents,
+        0,
+        eftPosText,
         DateTime.now().toIso8601String(),
       ],
     );
@@ -100,14 +101,14 @@ class CashSessionsRepository {
     );
   }
 
-  Future<void> updateEftPos(int sessionId, int eftPosCents) {
+  Future<void> updateEftPosText(int sessionId, String eftPosText) {
     return _database.execute(
       '''
       UPDATE cash_sessions
-      SET eft_pos_cents = ?
+      SET eft_pos_text = ?
       WHERE id = ?
       ''',
-      <Object?>[eftPosCents, sessionId],
+      <Object?>[eftPosText, sessionId],
     );
   }
 
@@ -116,7 +117,7 @@ class CashSessionsRepository {
     required String sessionName,
     required String businessDate,
     required int startingBalanceCents,
-    required int eftPosCents,
+    required String eftPosText,
   }) {
     return _database.execute(
       '''
@@ -124,14 +125,14 @@ class CashSessionsRepository {
       SET session_name = ?,
           business_date = ?,
           starting_balance_cents = ?,
-          eft_pos_cents = ?
+          eft_pos_text = ?
       WHERE id = ?
       ''',
       <Object?>[
         sessionName,
         businessDate,
         startingBalanceCents,
-        eftPosCents,
+        eftPosText,
         sessionId,
       ],
     );
@@ -143,10 +144,21 @@ class CashSessionsRepository {
       sessionName: row['session_name'] as String,
       businessDate: row['business_date'] as String,
       startingBalanceCents: row['starting_balance_cents'] as int,
-      eftPosCents: (row['eft_pos_cents'] as int?) ?? 0,
+      eftPosText: _resolveEftPosText(row),
       status: row['status'] as String,
       createdAt: DateTime.parse(row['created_at'] as String),
       closedAt: row['closed_at'] == null ? null : DateTime.parse(row['closed_at'] as String),
     );
+  }
+
+  String _resolveEftPosText(Map<String, Object?> row) {
+    final text = (row['eft_pos_text'] as String?)?.trim() ?? '';
+    if (text.isNotEmpty) {
+      return text;
+    }
+    final cents = (row['eft_pos_cents'] as int?) ?? 0;
+    final dollars = cents ~/ 100;
+    final remains = (cents % 100).abs();
+    return '$dollars.${remains.toString().padLeft(2, '0')}';
   }
 }

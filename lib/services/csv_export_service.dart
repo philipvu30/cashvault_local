@@ -10,19 +10,23 @@ import '../models/cash_entry_model.dart';
 import '../models/cash_session_model.dart';
 import '../models/cash_summary_model.dart';
 import 'money_format_service.dart';
+import 'money_parser_service.dart';
 
 class CsvExportService {
   const CsvExportService({
     required AppSettingsRepository appSettingsRepository,
     required AuditLogRepository auditLogRepository,
     required MoneyFormatService moneyFormatService,
+    required MoneyParserService moneyParserService,
   })  : _appSettingsRepository = appSettingsRepository,
         _auditLogRepository = auditLogRepository,
-        _moneyFormatService = moneyFormatService;
+        _moneyFormatService = moneyFormatService,
+        _moneyParserService = moneyParserService;
 
   final AppSettingsRepository _appSettingsRepository;
   final AuditLogRepository _auditLogRepository;
   final MoneyFormatService _moneyFormatService;
+  final MoneyParserService _moneyParserService;
 
   Future<String?> pickFolder() {
     return FilePicker.platform.getDirectoryPath();
@@ -42,6 +46,8 @@ class CsvExportService {
     }
     final finalName = filename.toLowerCase().endsWith('.csv') ? filename : '$filename.csv';
     final filePath = p.join(folderPath, finalName);
+    final eftPosText = _moneyParserService.tryNormalizeMoneyText(session.eftPosText) ?? '0.00';
+    final eftPosCents = _moneyParserService.tryParseToCents(eftPosText) ?? 0;
 
     final rows = <List<dynamic>>[
       <String>[
@@ -78,11 +84,11 @@ class CsvExportService {
         session.businessDate,
         'eft_pos',
         'EFT POS',
-        _moneyFormatService.formatCents(session.eftPosCents),
+        '\$$eftPosText',
         1,
-        _moneyFormatService.formatCents(session.eftPosCents),
-        session.eftPosCents,
-        session.eftPosCents,
+        '\$$eftPosText',
+        eftPosCents,
+        eftPosCents,
         '',
         DateTime.now().toIso8601String(),
       ],

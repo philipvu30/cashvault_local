@@ -84,7 +84,7 @@ class _SessionDetailPageState extends State<SessionDetailPage> {
       _coinRows = coin;
       _sessionNameController.text = session.sessionName;
       _businessDateController.text = session.businessDate;
-      _eftPosController.text = _editableMoney(session.eftPosCents);
+      _eftPosController.text = session.eftPosText;
       _loading = false;
       _error = null;
     });
@@ -105,7 +105,7 @@ class _SessionDetailPageState extends State<SessionDetailPage> {
     final session = _session!;
     final edit = _mode == SessionDetailMode.ownerEdit;
     final startingBalanceCents = session.startingBalanceCents;
-    final eftPosCents = appState.moneyParserService.tryParseToCents(_eftPosController.text) ?? session.eftPosCents;
+    final eftPosText = appState.moneyParserService.tryNormalizeMoneyText(_eftPosController.text) ?? session.eftPosText;
     final totalCash = _cashRows.fold<int>(0, (sum, row) => sum + row.rowTotalCents);
     final totalCoin = _coinRows.fold<int>(0, (sum, row) => sum + row.rowTotalCents);
     final finalTotal = startingBalanceCents + totalCash + totalCoin;
@@ -155,7 +155,7 @@ class _SessionDetailPageState extends State<SessionDetailPage> {
                         decoration: const InputDecoration(labelText: 'EFT POS', prefixText: '\$'),
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       )
-                    : Text(appState.moneyFormatService.formatCents(eftPosCents)),
+                    : Text('\$$eftPosText'),
               ),
               const SizedBox(height: 16),
               AppCard(
@@ -319,8 +319,6 @@ class _SessionDetailPageState extends State<SessionDetailPage> {
             SizedBox(width: 8),
             Expanded(flex: 2, child: Text('Total', textAlign: TextAlign.right, style: TextStyle(fontWeight: FontWeight.bold))),
             SizedBox(width: 8),
-            Expanded(flex: 3, child: Text('Comment', style: TextStyle(fontWeight: FontWeight.bold))),
-            SizedBox(width: 8),
             SizedBox(width: 50, child: Text('')),
           ],
         ),
@@ -379,17 +377,6 @@ class _SessionDetailPageState extends State<SessionDetailPage> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Expanded(
-                    flex: 3,
-                    child: readOnly
-                        ? Text(row.comment.isEmpty ? '-' : row.comment)
-                        : TextFormField(
-                            initialValue: row.comment,
-                            decoration: const InputDecoration(labelText: 'Comment'),
-                            onChanged: (value) => setState(() => row.comment = value),
-                          ),
-                  ),
-                  const SizedBox(width: 8),
                   SizedBox(
                     width: 50,
                     child: row.isCustom && editable
@@ -442,19 +429,15 @@ class _SessionDetailPageState extends State<SessionDetailPage> {
     try {
       final sessionName = _sessionNameController.text.trim();
       final businessDate = _businessDateController.text.trim();
-      final eftPosCents = appState.moneyParserService.tryParseToCents(_eftPosController.text);
-      if (sessionName.isEmpty || businessDate.isEmpty || eftPosCents == null || eftPosCents < 0) {
+      final eftPosText = appState.moneyParserService.tryNormalizeMoneyText(_eftPosController.text);
+      if (sessionName.isEmpty || businessDate.isEmpty || eftPosText == null) {
         throw StateError('Invalid session info values');
       }
 
       final merged = <CashEntryDraft>[..._cashRows, ..._coinRows];
       final saveRows = <CashEntryModel>[];
       for (final row in merged) {
-        final touched = row.quantity > 0 || row.comment.trim().isNotEmpty;
-        if (!touched) continue;
-        if (row.quantity <= 0) {
-          throw StateError('Quantity must be greater than 0 for saved rows');
-        }
+        if (row.quantity <= 0) continue;
         if (row.amountCents < 0) {
           throw StateError('Amount must be non-negative');
         }
@@ -484,7 +467,7 @@ class _SessionDetailPageState extends State<SessionDetailPage> {
         sessionName: sessionName,
         businessDate: businessDate,
         startingBalanceCents: session.startingBalanceCents,
-        eftPosCents: eftPosCents,
+        eftPosText: eftPosText,
         entries: saveRows,
       );
       await appState.logAuditAction(

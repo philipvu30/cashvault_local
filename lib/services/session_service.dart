@@ -76,7 +76,7 @@ class SessionService {
       sessionName: sessionName,
       businessDate: businessDate,
       startingBalanceCents: startingBalanceCents,
-      eftPosCents: 0,
+      eftPosText: '0.00',
     );
     await _appSettingsRepository.upsertSetting('active_session_id', sessionId.toString());
     await _auditLogRepository.log('session_created', details: 'id=$sessionId');

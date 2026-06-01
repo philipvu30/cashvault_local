@@ -1,10 +1,21 @@
 import 'package:flutter/material.dart';
 
-import 'app/cashvault_app.dart';
-import 'data/database.dart';
+void main() {
+  runApp(const CashVaultApp());
+}
 
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  final database = await CashVaultDatabase.initialize();
-  runApp(CashVaultRoot(database: database));
+class CashVaultApp extends StatelessWidget {
+  const CashVaultApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        body: Center(
+          child: Text('Cash Vault'),
+        ),
+      ),
+    );
+  }
 }

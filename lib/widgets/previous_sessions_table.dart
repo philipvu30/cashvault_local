@@ -4,7 +4,7 @@ import 'package:intl/intl.dart';
 import '../services/money_format_service.dart';
 import '../state/previous_sessions_state.dart';
 
-class PreviousSessionsTable extends StatelessWidget {
+class PreviousSessionsTable extends StatefulWidget {
   const PreviousSessionsTable({
     super.key,
     required this.rows,
@@ -19,7 +19,23 @@ class PreviousSessionsTable extends StatelessWidget {
   final void Function(PreviousSessionListRow row) onExport;
 
   @override
+  State<PreviousSessionsTable> createState() => _PreviousSessionsTableState();
+}
+
+class _PreviousSessionsTableState extends State<PreviousSessionsTable> {
+  final ScrollController _horizontalController = ScrollController();
+  final ScrollController _verticalController = ScrollController();
+
+  @override
+  void dispose() {
+    _horizontalController.dispose();
+    _verticalController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final rows = widget.rows;
     if (rows.isEmpty) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 16),
@@ -53,12 +69,25 @@ class PreviousSessionsTable extends StatelessWidget {
                 DataCell(SizedBox(width: 110, child: Text(_formatDate(session.businessDate)))),
                 DataCell(SizedBox(width: 180, child: Text(session.sessionName, overflow: TextOverflow.ellipsis))),
                 DataCell(SizedBox(width: 70, child: Text(session.status))),
-                DataCell(SizedBox(width: 110, child: Text(moneyFormatService.formatCents(session.startingBalanceCents)))),
-                DataCell(SizedBox(width: 100, child: Text(moneyFormatService.formatCents(row.totalCashCents)))),
-                DataCell(SizedBox(width: 100, child: Text(moneyFormatService.formatCents(row.totalCoinCents)))),
-                DataCell(SizedBox(width: 100, child: Text(moneyFormatService.formatCents(row.finalTotalCents)))),
+                DataCell(
+                  SizedBox(
+                    width: 110,
+                    child: Text(widget.moneyFormatService.formatCents(session.startingBalanceCents)),
+                  ),
+                ),
+                DataCell(
+                  SizedBox(width: 100, child: Text(widget.moneyFormatService.formatCents(row.totalCashCents))),
+                ),
+                DataCell(
+                  SizedBox(width: 100, child: Text(widget.moneyFormatService.formatCents(row.totalCoinCents))),
+                ),
+                DataCell(
+                  SizedBox(width: 100, child: Text(widget.moneyFormatService.formatCents(row.finalTotalCents))),
+                ),
                 DataCell(SizedBox(width: 130, child: Text(_formatDateTime(session.createdAt)))),
-                DataCell(SizedBox(width: 130, child: Text(session.closedAt == null ? '-' : _formatDateTime(session.closedAt!)))),
+                DataCell(
+                  SizedBox(width: 130, child: Text(session.closedAt == null ? '-' : _formatDateTime(session.closedAt!))),
+                ),
                 DataCell(
                   SizedBox(
                     width: 160,
@@ -67,13 +96,19 @@ class PreviousSessionsTable extends StatelessWidget {
                       runSpacing: 4,
                       children: <Widget>[
                         TextButton(
-                          onPressed: () => onView(row),
-                          style: TextButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 8)),
+                          onPressed: () => widget.onView(row),
+                          style: TextButton.styleFrom(
+                            minimumSize: const Size(0, 32),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          ),
                           child: const Text('View'),
                         ),
                         TextButton(
-                          onPressed: () => onExport(row),
-                          style: TextButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 8)),
+                          onPressed: () => widget.onExport(row),
+                          style: TextButton.styleFrom(
+                            minimumSize: const Size(0, 32),
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          ),
                           child: const Text('Export CSV'),
                         ),
                       ],
@@ -89,14 +124,18 @@ class PreviousSessionsTable extends StatelessWidget {
         return SizedBox(
           height: 480,
           child: Scrollbar(
+            controller: _horizontalController,
             thumbVisibility: true,
             child: SingleChildScrollView(
+              controller: _horizontalController,
               scrollDirection: Axis.horizontal,
               child: ConstrainedBox(
                 constraints: BoxConstraints(minWidth: minTableWidth),
                 child: Scrollbar(
+                  controller: _verticalController,
                   thumbVisibility: true,
                   child: SingleChildScrollView(
+                    controller: _verticalController,
                     scrollDirection: Axis.vertical,
                     child: table,
                   ),

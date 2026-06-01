@@ -10,7 +10,7 @@ class CashRepository {
     final typeValue = type == EntryType.cash ? 'cash' : 'coin';
     final rows = _database.select(
       '''
-      SELECT id, entry_type, label, amount, quantity, row_total, comment, created_at, updated_at
+      SELECT id, entry_type, label, amount_cents, quantity, row_total_cents, comment, created_at, updated_at
       FROM cash_entries
       WHERE entry_type = ?
       ORDER BY id ASC
@@ -32,15 +32,15 @@ class CashRepository {
         _database.execute(
           '''
           INSERT INTO cash_entries
-            (entry_type, label, amount, quantity, row_total, comment, created_at, updated_at)
+            (entry_type, label, amount_cents, quantity, row_total_cents, comment, created_at, updated_at)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
           ''',
           [
             row.entryTypeValue,
             row.label,
-            row.amountCents / 100.0,
+            row.amountCents,
             row.quantity,
-            row.rowTotalCents / 100.0,
+            row.rowTotalCents,
             row.comment,
             row.createdAt,
             now,

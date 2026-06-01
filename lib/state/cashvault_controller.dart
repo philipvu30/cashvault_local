@@ -6,6 +6,7 @@ import '../data/repositories/settings_repository.dart';
 import '../models/cash_entry.dart';
 import '../services/auth_service.dart';
 import '../services/csv_export_service.dart';
+import '../services/money_calculation_service.dart';
 
 class CashVaultController extends ChangeNotifier {
   CashVaultController({
@@ -30,6 +31,8 @@ class CashVaultController extends ChangeNotifier {
   bool _busy = false;
   String? _lastError;
   bool _needsOwnerSetup = false;
+  bool _isStartingBalanceUnlocked = false;
+  String _startingBalanceDraft = '0.00';
 
   int startingBalanceCents = 0;
   List<CashEntryInput> cashRows = <CashEntryInput>[];
@@ -42,6 +45,8 @@ class CashVaultController extends ChangeNotifier {
   bool get busy => _busy;
   String? get lastError => _lastError;
   bool get needsOwnerSetup => _needsOwnerSetup;
+  bool get isStartingBalanceUnlocked => _isStartingBalanceUnlocked;
+  String get startingBalanceDraft => _startingBalanceDraft;
 
   int get totalCashNotesCents =>
       cashRows.fold<int>(0, (sum, row) => sum + row.rowTotalCents);
@@ -61,6 +66,9 @@ class CashVaultController extends ChangeNotifier {
       _needsOwnerSetup = !hasOwner;
       startingBalanceCents = await _settingsRepository
           .getStartingBalanceCents();
+      _startingBalanceDraft = MoneyCalculationService.toDecimalString(
+        startingBalanceCents,
+      );
       cashRows = await _cashRepository.getEntries(EntryType.cash);
       coinRows = await _cashRepository.getEntries(EntryType.coin);
       databaseCreatedAt = await _settingsRepository.getDatabaseCreatedAt();
@@ -218,23 +226,50 @@ class CashVaultController extends ChangeNotifier {
     );
   }
 
-  Future<bool> updateStartingBalanceWithPassword({
-    required String password,
-    required int newBalanceCents,
-  }) async {
+  Future<bool> unlockStartingBalance(String password) async {
     final verified = await _authService.verifyOwnerPassword(password);
     if (!verified) {
       return false;
     }
 
-    startingBalanceCents = newBalanceCents;
-    await _settingsRepository.setStartingBalanceCents(startingBalanceCents);
-    await _authRepository.logAction(
-      'starting_balance_updated',
-      'Starting balance changed to ${startingBalanceCents / 100.0}',
+    _isStartingBalanceUnlocked = true;
+    _startingBalanceDraft = MoneyCalculationService.toDecimalString(
+      startingBalanceCents,
     );
     notifyListeners();
     return true;
+  }
+
+  void updateStartingBalanceDraft(String value) {
+    _startingBalanceDraft = value;
+    notifyListeners();
+  }
+
+  void cancelStartingBalanceEdit() {
+    _isStartingBalanceUnlocked = false;
+    _startingBalanceDraft = MoneyCalculationService.toDecimalString(
+      startingBalanceCents,
+    );
+    notifyListeners();
+  }
+
+  Future<String?> saveStartingBalanceDraft() async {
+    final newBalanceCents = MoneyCalculationService.parseToCents(
+      _startingBalanceDraft,
+    );
+
+    startingBalanceCents = newBalanceCents;
+    _startingBalanceDraft = MoneyCalculationService.toDecimalString(
+      startingBalanceCents,
+    );
+    _isStartingBalanceUnlocked = false;
+    await _settingsRepository.setStartingBalanceCents(startingBalanceCents);
+    await _authRepository.logAction(
+      'starting_balance_updated',
+      'Starting balance changed to ${MoneyCalculationService.toDecimalString(startingBalanceCents)}',
+    );
+    notifyListeners();
+    return null;
   }
 
   Future<bool> resetDailyEntriesWithPassword(String password) async {

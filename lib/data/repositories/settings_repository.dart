@@ -32,15 +32,11 @@ class SettingsRepository {
 
   Future<int> getStartingBalanceCents() async {
     final value = await getSetting('starting_balance');
-    final parsed = double.tryParse(value ?? '0') ?? 0;
-    return (parsed * 100).round();
+    return int.tryParse(value ?? '0') ?? 0;
   }
 
   Future<void> setStartingBalanceCents(int cents) {
-    return upsertSetting(
-      'starting_balance',
-      (cents / 100.0).toStringAsFixed(2),
-    );
+    return upsertSetting('starting_balance', cents.toString());
   }
 
   Future<String?> getDatabaseCreatedAt() => getSetting('database_created_at');

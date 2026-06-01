@@ -13,6 +13,7 @@ import 'package:sqlite3/sqlite3.dart' as sqlite;
 void main() {
   late sqlite.Database rawDb;
   late CashVaultDatabase db;
+  late SettingsRepository settingsRepository;
   late CashVaultController controller;
 
   setUp(() async {
@@ -20,7 +21,7 @@ void main() {
     db = CashVaultDatabase.fromRaw(rawDb);
 
     final authRepository = AuthRepository(db);
-    final settingsRepository = SettingsRepository(db);
+    settingsRepository = SettingsRepository(db);
     final cashRepository = CashRepository(db);
 
     controller = CashVaultController(
@@ -41,24 +42,42 @@ void main() {
     db.dispose();
   });
 
-  test('starting balance edit blocked with wrong owner password', () async {
+  test('starting balance remains locked with wrong owner password', () async {
     await controller.setupOwnerPassword('owner-123');
 
-    final failed = await controller.updateStartingBalanceWithPassword(
-      password: 'wrong-pass',
-      newBalanceCents: 5500,
-    );
+    final failed = await controller.unlockStartingBalance('wrong-pass');
 
     expect(failed, isFalse);
+    expect(controller.isStartingBalanceUnlocked, isFalse);
     expect(controller.startingBalanceCents, 0);
+  });
 
-    final success = await controller.updateStartingBalanceWithPassword(
-      password: 'owner-123',
-      newBalanceCents: 5500,
-    );
+  test('starting balance unlocks, saves, and relocks', () async {
+    await controller.setupOwnerPassword('owner-123');
 
-    expect(success, isTrue);
+    final unlocked = await controller.unlockStartingBalance('owner-123');
+    controller.updateStartingBalanceDraft('55.00');
+    await controller.saveStartingBalanceDraft();
+
+    expect(unlocked, isTrue);
+    expect(controller.isStartingBalanceUnlocked, isFalse);
     expect(controller.startingBalanceCents, 5500);
+    expect(controller.startingBalanceDraft, '55.00');
+    expect(await settingsRepository.getStartingBalanceCents(), 5500);
+  });
+
+  test('canceling starting balance edit leaves stored balance unchanged', () async {
+    await controller.setupOwnerPassword('owner-123');
+
+    final unlocked = await controller.unlockStartingBalance('owner-123');
+    controller.updateStartingBalanceDraft('12.34');
+    controller.cancelStartingBalanceEdit();
+
+    expect(unlocked, isTrue);
+    expect(controller.isStartingBalanceUnlocked, isFalse);
+    expect(controller.startingBalanceCents, 0);
+    expect(controller.startingBalanceDraft, '0.00');
+    expect(await settingsRepository.getStartingBalanceCents(), 0);
   });
 
   test('cash and coin totals plus final total are calculated correctly', () {
@@ -79,5 +98,22 @@ void main() {
     expect(controller.totalCashNotesCents, 10000);
     expect(controller.totalCoinsCents, 250);
     expect(controller.finalTotalCents, 20250);
+  });
+
+  test('row add update and delete updates totals immediately', () {
+    controller.addRow(EntryType.cash);
+    expect(controller.cashRows, hasLength(1));
+
+    final updated = controller.cashRows.first.copyWith(
+      label: 'Hundred',
+      amountCents: 10000,
+      quantity: 3,
+    );
+    controller.updateRow(EntryType.cash, 0, updated);
+    expect(controller.totalCashNotesCents, 30000);
+
+    controller.removeRow(EntryType.cash, 0);
+    expect(controller.cashRows, isEmpty);
+    expect(controller.totalCashNotesCents, 0);
   });
 }

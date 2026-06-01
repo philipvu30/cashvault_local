@@ -66,7 +66,7 @@ class CsvExportService {
       <dynamic>['Timestamp', timestamp.toIso8601String()],
       <dynamic>[
         'Starting Balance',
-        MoneyCalculationService.centsToDecimal(startingBalanceCents),
+        MoneyCalculationService.toDecimalString(startingBalanceCents),
       ],
       <dynamic>[],
       <dynamic>['Cash Notes'],
@@ -74,9 +74,9 @@ class CsvExportService {
       ...cashRows.map(
         (row) => <dynamic>[
           row.label,
-          MoneyCalculationService.centsToDecimal(row.amountCents),
+          MoneyCalculationService.toDecimalString(row.amountCents),
           row.quantity,
-          MoneyCalculationService.centsToDecimal(row.rowTotalCents),
+          MoneyCalculationService.toDecimalString(row.rowTotalCents),
           row.comment ?? '',
         ],
       ),
@@ -86,9 +86,9 @@ class CsvExportService {
       ...coinRows.map(
         (row) => <dynamic>[
           row.label,
-          MoneyCalculationService.centsToDecimal(row.amountCents),
+          MoneyCalculationService.toDecimalString(row.amountCents),
           row.quantity,
-          MoneyCalculationService.centsToDecimal(row.rowTotalCents),
+          MoneyCalculationService.toDecimalString(row.rowTotalCents),
           row.comment ?? '',
         ],
       ),
@@ -96,15 +96,15 @@ class CsvExportService {
       <dynamic>['Totals'],
       <dynamic>[
         'Total Cash Notes',
-        MoneyCalculationService.centsToDecimal(totalCashNotesCents),
+        MoneyCalculationService.toDecimalString(totalCashNotesCents),
       ],
       <dynamic>[
         'Total Coins',
-        MoneyCalculationService.centsToDecimal(totalCoinsCents),
+        MoneyCalculationService.toDecimalString(totalCoinsCents),
       ],
       <dynamic>[
         'Final Total',
-        MoneyCalculationService.centsToDecimal(finalTotalCents),
+        MoneyCalculationService.toDecimalString(finalTotalCents),
       ],
     ];
 

@@ -52,9 +52,9 @@ class CashEntryInput {
     return <String, Object?>{
       'entry_type': entryTypeValue,
       'label': label,
-      'amount': amountCents / 100.0,
+      'amount_cents': amountCents,
       'quantity': quantity,
-      'row_total': rowTotalCents / 100.0,
+      'row_total_cents': rowTotalCents,
       'comment': comment,
       'created_at': createdAt,
       'updated_at': updatedAt,
@@ -62,7 +62,7 @@ class CashEntryInput {
   }
 
   static CashEntryInput fromDb(Map<String, Object?> row) {
-    final amount = (row['amount'] as num?)?.toDouble() ?? 0;
+    final amountCents = (row['amount_cents'] as num?)?.toInt() ?? 0;
     final quantity = (row['quantity'] as num?)?.toInt() ?? 0;
     return CashEntryInput(
       id: (row['id'] as num?)?.toInt(),
@@ -70,7 +70,7 @@ class CashEntryInput {
           ? EntryType.coin
           : EntryType.cash,
       label: (row['label'] as String?) ?? '',
-      amountCents: (amount * 100).round(),
+      amountCents: amountCents,
       quantity: quantity,
       comment: row['comment'] as String?,
       createdAt:

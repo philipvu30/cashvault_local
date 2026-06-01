@@ -88,6 +88,7 @@ class AppState extends ChangeNotifier {
     needsOwnerPasswordSetup = !hasPassword;
 
     activeSession = await _sessionService!.ensureFirstSession();
+    await _ensureAustraliaDefaultPresetsIfEmpty();
     await refresh();
 
     isReady = true;
@@ -478,5 +479,34 @@ class AppState extends ChangeNotifier {
 
     cashRows = <CashEntryDraft>[...cashPresetRows, ...customCash];
     coinRows = <CashEntryDraft>[...coinPresetRows, ...customCoin];
+  }
+
+  Future<void> _ensureAustraliaDefaultPresetsIfEmpty() async {
+    final existing = await _denominationPresetService!.getAll();
+    if (existing.isNotEmpty) return;
+
+    const defaults = <Map<String, Object>>[
+      <String, Object>{'entryType': 'cash', 'label': '\$100 Note', 'amountCents': 10000, 'sortOrder': 1},
+      <String, Object>{'entryType': 'cash', 'label': '\$50 Note', 'amountCents': 5000, 'sortOrder': 2},
+      <String, Object>{'entryType': 'cash', 'label': '\$20 Note', 'amountCents': 2000, 'sortOrder': 3},
+      <String, Object>{'entryType': 'cash', 'label': '\$10 Note', 'amountCents': 1000, 'sortOrder': 4},
+      <String, Object>{'entryType': 'cash', 'label': '\$5 Note', 'amountCents': 500, 'sortOrder': 5},
+      <String, Object>{'entryType': 'coin', 'label': '\$2 Coin', 'amountCents': 200, 'sortOrder': 1},
+      <String, Object>{'entryType': 'coin', 'label': '\$1 Coin', 'amountCents': 100, 'sortOrder': 2},
+      <String, Object>{'entryType': 'coin', 'label': '50c Coin', 'amountCents': 50, 'sortOrder': 3},
+      <String, Object>{'entryType': 'coin', 'label': '20c Coin', 'amountCents': 20, 'sortOrder': 4},
+      <String, Object>{'entryType': 'coin', 'label': '10c Coin', 'amountCents': 10, 'sortOrder': 5},
+      <String, Object>{'entryType': 'coin', 'label': '5c Coin', 'amountCents': 5, 'sortOrder': 6},
+    ];
+
+    for (final row in defaults) {
+      await _denominationPresetService!.createPreset(
+        entryType: row['entryType'] as String,
+        label: row['label'] as String,
+        amountCents: row['amountCents'] as int,
+        sortOrder: row['sortOrder'] as int,
+        isActive: true,
+      );
+    }
   }
 }

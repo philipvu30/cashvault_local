@@ -73,6 +73,32 @@ class _MainCashScreenState extends State<MainCashScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      const Expanded(
+                        child: Text(
+                          'Main Cash',
+                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      FilledButton(
+                        onPressed: !session.isOpen || appState.isSaving
+                            ? null
+                            : () async {
+                                final cents = appState.moneyParserService.tryParseToCents(_startingBalanceController.text);
+                                await appState.saveSessionData(editedStartingBalanceCents: cents);
+                                if (!context.mounted) return;
+                                if (appState.errorMessage == null) {
+                                  _showSnack(context, 'Session saved');
+                                } else {
+                                  _showSnack(context, appState.errorMessage!);
+                                }
+                              },
+                        child: const Text('Save'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
                   AppCard(
                     title: 'Sessions',
                     child: Column(
@@ -98,21 +124,6 @@ class _MainCashScreenState extends State<MainCashScreen> {
                             OutlinedButton(
                               onPressed: () => Navigator.of(context).pushNamed(AppRoutes.previousSessions),
                               child: const Text('View Previous Sessions'),
-                            ),
-                            FilledButton(
-                              onPressed: !session.isOpen || appState.isSaving
-                                  ? null
-                                  : () async {
-                                      final cents = appState.moneyParserService.tryParseToCents(_startingBalanceController.text);
-                                      await appState.saveSessionData(editedStartingBalanceCents: cents);
-                                      if (!context.mounted) return;
-                                      if (appState.errorMessage == null) {
-                                        _showSnack(context, 'Session saved');
-                                      } else {
-                                        _showSnack(context, appState.errorMessage!);
-                                      }
-                                    },
-                              child: const Text('Save'),
                             ),
                             OutlinedButton(
                               onPressed: () => _showExportDialog(context, appState),
@@ -223,8 +234,6 @@ class _MainCashScreenState extends State<MainCashScreen> {
   }
 
   Future<void> _startNewSession(BuildContext context, AppState appState) async {
-    final auth = await _askOwnerPassword(context, appState);
-    if (!auth) return;
     final result = await showDialog<NewSessionDialogResult>(
       context: context,
       builder: (_) => NewSessionDialog(
@@ -241,22 +250,7 @@ class _MainCashScreenState extends State<MainCashScreen> {
   }
 
   Future<void> _closeCurrentSession(BuildContext context, AppState appState) async {
-    final auth = await _askOwnerPassword(context, appState);
-    if (!auth) return;
     await appState.closeCurrentSession();
-  }
-
-  Future<bool> _askOwnerPassword(BuildContext context, AppState appState) async {
-    final password = await showDialog<String?>(
-      context: context,
-      builder: (_) => const PasswordDialog(),
-    );
-    if (password == null) return false;
-    final ok = await appState.verifyOwnerPassword(password);
-    if (!ok && context.mounted) {
-      _showSnack(context, 'Invalid owner password');
-    }
-    return ok;
   }
 
   Future<void> _showExportDialog(BuildContext context, AppState appState) async {

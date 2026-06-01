@@ -8,11 +8,59 @@ import '../widgets/denomination_preset_editor_dialog.dart';
 import '../widgets/password_dialog.dart';
 import '../widgets/settings_section_card.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
   @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  bool _isAuthenticating = true;
+  bool _isAuthenticated = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _authenticateOnEntry());
+  }
+
+  Future<void> _authenticateOnEntry() async {
+    final appState = context.read<AppState>();
+    final password = await showDialog<String?>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const PasswordDialog(title: 'Owner Password Required'),
+    );
+
+    if (!mounted) return;
+    if (password == null) {
+      Navigator.of(context).pop();
+      return;
+    }
+
+    final ok = await appState.verifyOwnerPassword(password);
+    if (!mounted) return;
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invalid owner password')));
+      Navigator.of(context).pop();
+      return;
+    }
+
+    setState(() {
+      _isAuthenticated = true;
+      _isAuthenticating = false;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isAuthenticating || !_isAuthenticated) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Consumer<AppState>(
       builder: (context, appState, _) {
         return Scaffold(
@@ -30,7 +78,7 @@ class SettingsScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 children: <Widget>[
                   Text(
-                    'Manage owner password, export defaults, and reusable labels shown on Main Cash Screen.',
+                    'Manage owner password, export defaults, and reusable labels.',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 16),
@@ -48,36 +96,6 @@ class SettingsScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  const SettingsSectionCard(
-                    title: 'Starting Balance Protection',
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text('Starting balance editing requires owner password.'),
-                        SizedBox(height: 8),
-                        Text('Status: Enabled'),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  SettingsSectionCard(
-                    title: 'Database',
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        const Text('Storage Mode: Local Only'),
-                        const Text('Database Encryption: Enabled'),
-                        const Text('Database Location: App Folder'),
-                        const SizedBox(height: 8),
-                        OutlinedButton(
-                          onPressed: () => _snack(context, 'Database status: local encrypted SQLite active'),
-                          child: const Text('Show Database Status'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
                   SettingsSectionCard(
                     title: 'Export Settings',
                     child: Column(
@@ -115,19 +133,6 @@ class SettingsScreen extends StatelessWidget {
                           type: 'coin',
                           presets: appState.coinPresets,
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  SettingsSectionCard(
-                    title: 'App Info',
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        const Text('App Name: CashVault Local'),
-                        const Text('Version: 1.0.0'),
-                        const Text('Platform: Windows'),
-                        Text('Database Created: ${appState.databaseCreatedAt ?? '-'}'),
                       ],
                     ),
                   ),
@@ -220,6 +225,7 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Future<void> _changePassword(BuildContext context, AppState appState) async {
+    if (!_isAuthenticated) return;
     final data = await showDialog<ChangePasswordResult>(
       context: context,
       builder: (_) => const ChangePasswordDialog(),
@@ -239,8 +245,7 @@ class SettingsScreen extends StatelessWidget {
     required String type,
     required DenominationPresetModel? preset,
   }) async {
-    final auth = await _askOwnerPassword(context, appState);
-    if (!auth) return;
+    if (!_isAuthenticated) return;
     final result = await showDialog<DenominationPresetEditorResult>(
       context: context,
       builder: (_) => DenominationPresetEditorDialog(
@@ -260,8 +265,7 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Future<void> _togglePreset(BuildContext context, AppState appState, DenominationPresetModel preset) async {
-    final auth = await _askOwnerPassword(context, appState);
-    if (!auth) return;
+    if (!_isAuthenticated) return;
     await appState.setPresetActive(
       id: preset.id,
       isActive: !preset.isActive,
@@ -270,8 +274,7 @@ class SettingsScreen extends StatelessWidget {
   }
 
   Future<void> _deletePreset(BuildContext context, AppState appState, DenominationPresetModel preset) async {
-    final auth = await _askOwnerPassword(context, appState);
-    if (!auth) return;
+    if (!_isAuthenticated) return;
 
     final confirm = await showDialog<bool>(
       context: context,
@@ -297,17 +300,6 @@ class SettingsScreen extends StatelessWidget {
         _snack(context, e.toString().replaceFirst('Bad state: ', ''));
       }
     }
-  }
-
-  Future<bool> _askOwnerPassword(BuildContext context, AppState appState) async {
-    final password = await showDialog<String?>(
-      context: context,
-      builder: (_) => const PasswordDialog(),
-    );
-    if (password == null) return false;
-    final ok = await appState.verifyOwnerPassword(password);
-    if (!ok && context.mounted) _snack(context, 'Invalid owner password');
-    return ok;
   }
 
   void _snack(BuildContext context, String message) {

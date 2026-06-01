@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../services/money_format_service.dart';
 import '../services/money_parser_service.dart';
@@ -65,6 +66,9 @@ class CashEntryRow extends StatelessWidget {
               enabled: !isReadOnly,
               decoration: const InputDecoration(labelText: 'Qty'),
               keyboardType: TextInputType.number,
+              inputFormatters: <TextInputFormatter>[
+                FilteringTextInputFormatter.digitsOnly,
+              ],
               onChanged: (value) => onQuantityChanged(int.tryParse(value) ?? 0),
             ),
           ),

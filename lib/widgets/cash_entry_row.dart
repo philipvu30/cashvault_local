@@ -5,7 +5,7 @@ import '../services/money_format_service.dart';
 import '../services/money_parser_service.dart';
 import '../state/cash_entries_state.dart';
 
-class CashEntryRow extends StatelessWidget {
+class CashEntryRow extends StatefulWidget {
   const CashEntryRow({
     super.key,
     required this.row,
@@ -32,6 +32,37 @@ class CashEntryRow extends StatelessWidget {
   final FocusNode? nextQtyFocusNode;
 
   @override
+  State<CashEntryRow> createState() => _CashEntryRowState();
+}
+
+class _CashEntryRowState extends State<CashEntryRow> {
+  late final TextEditingController _qtyController;
+
+  @override
+  void initState() {
+    super.initState();
+    _qtyController = TextEditingController(text: _qtyText(widget.row.quantity));
+  }
+
+  @override
+  void didUpdateWidget(covariant CashEntryRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final desired = _qtyText(widget.row.quantity);
+    if (_qtyController.text != desired) {
+      _qtyController.value = TextEditingValue(
+        text: desired,
+        selection: TextSelection.collapsed(offset: desired.length),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _qtyController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -39,49 +70,49 @@ class CashEntryRow extends StatelessWidget {
         children: <Widget>[
           Expanded(
             flex: 3,
-            child: row.isCustom
+            child: widget.row.isCustom
                 ? TextFormField(
-                    initialValue: row.label,
-                    enabled: !isReadOnly,
+                    initialValue: widget.row.label,
+                    enabled: !widget.isReadOnly,
                     decoration: const InputDecoration(labelText: 'Label'),
-                    onChanged: onLabelChanged,
+                    onChanged: widget.onLabelChanged,
                   )
-                : Text(row.label),
+                : Text(widget.row.label),
           ),
           const SizedBox(width: 8),
           Expanded(
             flex: 2,
-            child: row.isCustom
+            child: widget.row.isCustom
                 ? TextFormField(
-                    initialValue: _centsToEditableText(row.amountCents),
-                    enabled: !isReadOnly,
+                    initialValue: _centsToEditableText(widget.row.amountCents),
+                    enabled: !widget.isReadOnly,
                     decoration: const InputDecoration(labelText: 'Amount'),
                     onChanged: (value) {
-                      final cents = moneyParserService.tryParseToCents(value);
-                      if (cents != null) onAmountChanged(cents);
+                      final cents = widget.moneyParserService.tryParseToCents(value);
+                      if (cents != null) widget.onAmountChanged(cents);
                     },
                   )
-                : Text(moneyFormatService.formatCents(row.amountCents)),
+                : Text(widget.moneyFormatService.formatCents(widget.row.amountCents)),
           ),
           const SizedBox(width: 8),
           Expanded(
             child: TextFormField(
-              focusNode: qtyFocusNode,
-              initialValue: row.quantity == 0 ? '' : row.quantity.toString(),
-              enabled: !isReadOnly,
+              controller: _qtyController,
+              focusNode: widget.qtyFocusNode,
+              enabled: !widget.isReadOnly,
               decoration: const InputDecoration(labelText: 'Qty'),
               keyboardType: TextInputType.number,
               textInputAction: TextInputAction.next,
               inputFormatters: <TextInputFormatter>[
                 FilteringTextInputFormatter.digitsOnly,
               ],
-              onChanged: (value) => onQuantityChanged(int.tryParse(value) ?? 0),
+              onChanged: (value) => widget.onQuantityChanged(int.tryParse(value) ?? 0),
               onFieldSubmitted: (_) {
-                final next = nextQtyFocusNode;
+                final next = widget.nextQtyFocusNode;
                 if (next != null) {
                   FocusScope.of(context).requestFocus(next);
                 } else {
-                  qtyFocusNode.unfocus();
+                  widget.qtyFocusNode.unfocus();
                 }
               },
             ),
@@ -90,20 +121,24 @@ class CashEntryRow extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              moneyFormatService.formatCents(row.rowTotalCents),
+              widget.moneyFormatService.formatCents(widget.row.rowTotalCents),
               textAlign: TextAlign.right,
             ),
           ),
-          if (row.isCustom) ...<Widget>[
+          if (widget.row.isCustom) ...<Widget>[
             const SizedBox(width: 8),
             IconButton(
-              onPressed: isReadOnly ? null : onDelete,
+              onPressed: widget.isReadOnly ? null : widget.onDelete,
               icon: const Icon(Icons.delete_forever, color: Colors.red),
             ),
           ],
         ],
       ),
     );
+  }
+
+  String _qtyText(int quantity) {
+    return quantity == 0 ? '' : quantity.toString();
   }
 
   String _centsToEditableText(int cents) {

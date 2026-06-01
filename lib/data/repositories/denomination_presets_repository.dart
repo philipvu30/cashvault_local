@@ -98,6 +98,26 @@ class DenominationPresetsRepository {
     );
   }
 
+  Future<void> deletePreset(int id) {
+    return _deletePresetGuarded(id);
+  }
+
+  Future<void> _deletePresetGuarded(int id) async {
+    final rows = await _database.selectMaps(
+      'SELECT COUNT(*) AS total FROM cash_entries WHERE preset_id = ?',
+      <Object?>[id],
+    );
+    final total = (rows.first['total'] as int?) ?? 0;
+    if (total > 0) {
+      throw StateError('Cannot delete label: session data already uses this label.');
+    }
+
+    await _database.execute(
+      'DELETE FROM denomination_presets WHERE id = ?',
+      <Object?>[id],
+    );
+  }
+
   DenominationPresetModel _map(Map<String, Object?> row) {
     return DenominationPresetModel(
       id: row['id'] as int,

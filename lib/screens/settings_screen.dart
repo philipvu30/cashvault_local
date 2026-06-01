@@ -130,7 +130,7 @@ class SettingsScreen extends StatelessWidget {
             Expanded(flex: 2, child: Text('Amount', style: TextStyle(fontWeight: FontWeight.bold))),
             Expanded(child: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
             Expanded(child: Text('Sort', style: TextStyle(fontWeight: FontWeight.bold))),
-            Expanded(flex: 2, child: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
+            Expanded(flex: 3, child: Text('Actions', style: TextStyle(fontWeight: FontWeight.bold))),
           ],
         ),
         const SizedBox(height: 6),
@@ -149,7 +149,7 @@ class SettingsScreen extends StatelessWidget {
                 Expanded(child: Text(preset.isActive ? 'Active' : 'Inactive')),
                 Expanded(child: Text('${preset.sortOrder}')),
                 Expanded(
-                  flex: 2,
+                  flex: 3,
                   child: Wrap(
                     spacing: 6,
                     children: <Widget>[
@@ -160,6 +160,11 @@ class SettingsScreen extends StatelessWidget {
                       TextButton(
                         onPressed: () => _togglePreset(context, appState, preset),
                         child: Text(preset.isActive ? 'Deactivate' : 'Activate'),
+                      ),
+                      TextButton(
+                        onPressed: () => _deletePreset(context, appState, preset),
+                        style: TextButton.styleFrom(foregroundColor: Colors.red),
+                        child: const Text('Delete'),
                       ),
                     ],
                   ),
@@ -197,7 +202,6 @@ class SettingsScreen extends StatelessWidget {
     final result = await showDialog<DenominationPresetEditorResult>(
       context: context,
       builder: (_) => DenominationPresetEditorDialog(
-        parser: appState.moneyParserService,
         defaultType: type,
         initial: preset,
       ),
@@ -221,6 +225,36 @@ class SettingsScreen extends StatelessWidget {
       isActive: !preset.isActive,
       label: preset.label,
     );
+  }
+
+  Future<void> _deletePreset(BuildContext context, AppState appState, DenominationPresetModel preset) async {
+    final auth = await _askOwnerPassword(context, appState);
+    if (!auth) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete Label'),
+        content: Text('Delete "${preset.label}" permanently?'),
+        actions: <Widget>[
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+    try {
+      await appState.deletePreset(id: preset.id, label: preset.label);
+    } catch (e) {
+      if (context.mounted) {
+        _snack(context, e.toString().replaceFirst('Bad state: ', ''));
+      }
+    }
   }
 
   Future<bool> _askOwnerPassword(BuildContext context, AppState appState) async {

@@ -10,7 +10,6 @@ import '../widgets/money_input_field.dart';
 import '../widgets/new_session_dialog.dart';
 import '../widgets/owner_password_setup_dialog.dart';
 import '../widgets/password_dialog.dart';
-import '../widgets/reopen_session_dialog.dart';
 import '../widgets/session_header.dart';
 import '../widgets/summary_panel.dart';
 
@@ -46,6 +45,7 @@ class _MainCashScreenState extends State<MainCashScreen> {
         if (session == null) {
           return const Scaffold(body: Center(child: Text('No active session')));
         }
+        final canStartNewSession = !_isSameDate(session.createdAt, DateTime.now());
 
         final startingBalanceText = _editableMoney(appState.startingBalanceCents);
         if (_startingBalanceController.text != startingBalanceText) {
@@ -84,17 +84,35 @@ class _MainCashScreenState extends State<MainCashScreen> {
                           spacing: 8,
                           runSpacing: 8,
                           children: <Widget>[
-                            OutlinedButton(
-                              onPressed: () => _startNewSession(context, appState),
-                              child: const Text('Start New Session'),
+                            Tooltip(
+                              message: canStartNewSession ? 'Create a new session' : 'New session available tomorrow',
+                              child: OutlinedButton(
+                                onPressed: canStartNewSession ? () => _startNewSession(context, appState) : null,
+                                child: const Text('Start New Session'),
+                              ),
                             ),
                             OutlinedButton(
                               onPressed: session.isOpen ? () => _closeCurrentSession(context, appState) : null,
                               child: const Text('Close Current Session'),
                             ),
+                            FilledButton(
+                              onPressed: !session.isOpen || appState.isSaving
+                                  ? null
+                                  : () async {
+                                      final cents = appState.moneyParserService.tryParseToCents(_startingBalanceController.text);
+                                      await appState.saveSessionData(editedStartingBalanceCents: cents);
+                                      if (!context.mounted) return;
+                                      if (appState.errorMessage == null) {
+                                        _showSnack(context, 'Session saved');
+                                      } else {
+                                        _showSnack(context, appState.errorMessage!);
+                                      }
+                                    },
+                              child: const Text('Save'),
+                            ),
                             OutlinedButton(
-                              onPressed: () => _reopenSession(context, appState),
-                              child: const Text('Reopen Previous Session'),
+                              onPressed: () => _showExportDialog(context, appState),
+                              child: const Text('Export CSV'),
                             ),
                           ],
                         ),
@@ -170,15 +188,6 @@ class _MainCashScreenState extends State<MainCashScreen> {
                           onDeleteRow: appState.removeCustomRow,
                           readOnly: !session.isOpen,
                         ),
-                        const SizedBox(height: 8),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: OutlinedButton.icon(
-                            onPressed: !session.isOpen ? null : () => appState.addCustomRow('coin'),
-                            icon: const Icon(Icons.add),
-                            label: const Text('Custom Coin Row'),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -189,31 +198,6 @@ class _MainCashScreenState extends State<MainCashScreen> {
                       summary: appState.summary,
                       moneyFormatService: appState.moneyFormatService,
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: <Widget>[
-                      FilledButton(
-                        onPressed: !session.isOpen || appState.isSaving
-                            ? null
-                            : () async {
-                                final cents = appState.moneyParserService.tryParseToCents(_startingBalanceController.text);
-                                await appState.saveSessionData(editedStartingBalanceCents: cents);
-                                if (!context.mounted) return;
-                                if (appState.errorMessage == null) {
-                                  _showSnack(context, 'Session saved');
-                                } else {
-                                  _showSnack(context, appState.errorMessage!);
-                                }
-                              },
-                        child: const Text('Save'),
-                      ),
-                      const SizedBox(width: 12),
-                      OutlinedButton(
-                        onPressed: () => _showExportDialog(context, appState),
-                        child: const Text('Export CSV'),
-                      ),
-                    ],
                   ),
                 ],
               ),
@@ -256,18 +240,6 @@ class _MainCashScreenState extends State<MainCashScreen> {
     final auth = await _askOwnerPassword(context, appState);
     if (!auth) return;
     await appState.closeCurrentSession();
-  }
-
-  Future<void> _reopenSession(BuildContext context, AppState appState) async {
-    final auth = await _askOwnerPassword(context, appState);
-    if (!auth) return;
-    final sessions = await appState.allSessions();
-    final selectedId = await showDialog<int?>(
-      context: context,
-      builder: (_) => ReopenSessionDialog(sessions: sessions),
-    );
-    if (selectedId == null) return;
-    await appState.reopenSession(selectedId);
   }
 
   Future<bool> _askOwnerPassword(BuildContext context, AppState appState) async {
@@ -316,6 +288,10 @@ class _MainCashScreenState extends State<MainCashScreen> {
     final dollars = cents ~/ 100;
     final remains = cents % 100;
     return '$dollars.${remains.toString().padLeft(2, '0')}';
+  }
+
+  bool _isSameDate(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
   void _showSnack(BuildContext context, String message) {

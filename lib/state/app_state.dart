@@ -331,6 +331,14 @@ class AppState extends ChangeNotifier {
     await refresh();
   }
 
+  Future<void> deletePreset({
+    required int id,
+    required String label,
+  }) async {
+    await _denominationPresetService!.deletePreset(id: id, label: label);
+    await refresh();
+  }
+
   Future<void> startNewSession({
     required String sessionName,
     required String businessDate,

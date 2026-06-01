@@ -64,4 +64,12 @@ class DenominationPresetService {
       await _auditLogRepository.log('denomination_preset_deactivated', details: '$id:$label');
     }
   }
+
+  Future<void> deletePreset({
+    required int id,
+    required String label,
+  }) async {
+    await _repository.deletePreset(id);
+    await _auditLogRepository.log('denomination_preset_deleted', details: '$id:$label');
+  }
 }

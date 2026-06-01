@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../models/cash_session_model.dart';
 
@@ -13,6 +14,7 @@ class SessionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isOpen = session.status == 'open';
+    final formattedBusinessDate = _formatDisplayDate(session.businessDate);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -22,7 +24,7 @@ class SessionHeader extends StatelessWidget {
             children: <Widget>[
               Text('Session Name: ${session.sessionName}'),
               const SizedBox(height: 4),
-              Text('Business Date: ${session.businessDate}'),
+              Text('Business Date: $formattedBusinessDate'),
             ],
           ),
         ),
@@ -32,5 +34,14 @@ class SessionHeader extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  String _formatDisplayDate(String raw) {
+    try {
+      final parsed = DateTime.parse(raw);
+      return DateFormat('dd-MM-yyyy').format(parsed);
+    } catch (_) {
+      return raw;
+    }
   }
 }

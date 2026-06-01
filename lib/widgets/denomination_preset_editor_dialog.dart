@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../models/denomination_preset_model.dart';
-import '../services/money_parser_service.dart';
 
 class DenominationPresetEditorResult {
   const DenominationPresetEditorResult({
@@ -22,12 +21,10 @@ class DenominationPresetEditorResult {
 class DenominationPresetEditorDialog extends StatefulWidget {
   const DenominationPresetEditorDialog({
     super.key,
-    required this.parser,
     this.initial,
     required this.defaultType,
   });
 
-  final MoneyParserService parser;
   final DenominationPresetModel? initial;
   final String defaultType;
 
@@ -38,7 +35,7 @@ class DenominationPresetEditorDialog extends StatefulWidget {
 class _DenominationPresetEditorDialogState extends State<DenominationPresetEditorDialog> {
   late String _entryType;
   late TextEditingController _labelController;
-  late TextEditingController _amountController;
+  late TextEditingController _amountCentsController;
   late TextEditingController _sortController;
   bool _isActive = true;
   String? _error;
@@ -49,9 +46,7 @@ class _DenominationPresetEditorDialogState extends State<DenominationPresetEdito
     final initial = widget.initial;
     _entryType = initial?.entryType ?? widget.defaultType;
     _labelController = TextEditingController(text: initial?.label ?? '');
-    _amountController = TextEditingController(
-      text: initial == null ? '' : _editableMoney(initial.amountCents),
-    );
+    _amountCentsController = TextEditingController(text: (initial?.amountCents ?? 0).toString());
     _sortController = TextEditingController(text: (initial?.sortOrder ?? 0).toString());
     _isActive = initial?.isActive ?? true;
   }
@@ -59,7 +54,7 @@ class _DenominationPresetEditorDialogState extends State<DenominationPresetEdito
   @override
   void dispose() {
     _labelController.dispose();
-    _amountController.dispose();
+    _amountCentsController.dispose();
     _sortController.dispose();
     super.dispose();
   }
@@ -69,23 +64,55 @@ class _DenominationPresetEditorDialogState extends State<DenominationPresetEdito
     return AlertDialog(
       title: Text(widget.initial == null ? 'Add Label' : 'Edit Label'),
       content: SizedBox(
-        width: 440,
+        width: 460,
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            DropdownButtonFormField<String>(
-              initialValue: _entryType,
-              decoration: const InputDecoration(labelText: 'Entry Type'),
-              items: const <DropdownMenuItem<String>>[
-                DropdownMenuItem(value: 'cash', child: Text('cash')),
-                DropdownMenuItem(value: 'coin', child: Text('coin')),
+            const Text('Type'),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: RadioListTile<String>(
+                    value: 'cash',
+                    groupValue: _entryType,
+                    onChanged: (value) => setState(() => _entryType = value ?? 'cash'),
+                    title: const Text('Cash'),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                Expanded(
+                  child: RadioListTile<String>(
+                    value: 'coin',
+                    groupValue: _entryType,
+                    onChanged: (value) => setState(() => _entryType = value ?? 'coin'),
+                    title: const Text('Coin'),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
               ],
-              onChanged: (value) => setState(() => _entryType = value ?? 'cash'),
             ),
             const SizedBox(height: 8),
-            TextField(controller: _labelController, decoration: const InputDecoration(labelText: 'Label')),
+            TextField(
+              controller: _labelController,
+              decoration: const InputDecoration(labelText: 'Label'),
+            ),
             const SizedBox(height: 8),
-            TextField(controller: _amountController, decoration: const InputDecoration(labelText: 'Amount')),
+            TextField(
+              controller: _amountCentsController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Amount (Cents)',
+                hintText: 'Example: 10000',
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Digits only. Stored as integer cents.',
+              style: TextStyle(fontSize: 12, color: Colors.black54),
+            ),
             const SizedBox(height: 8),
             TextField(
               controller: _sortController,
@@ -108,19 +135,36 @@ class _DenominationPresetEditorDialogState extends State<DenominationPresetEdito
         FilledButton(
           onPressed: () {
             final label = _labelController.text.trim();
-            final amount = widget.parser.tryParseToCents(_amountController.text);
-            final sort = int.tryParse(_sortController.text.trim());
-            if (label.isEmpty || amount == null || amount < 0 || sort == null) {
+            final amountRaw = _amountCentsController.text.trim();
+            final sortRaw = _sortController.text.trim();
+
+            if (label.isEmpty) {
+              setState(() => _error = 'Label cannot be empty.');
+              return;
+            }
+            if (!RegExp(r'^\d+$').hasMatch(amountRaw)) {
+              setState(() => _error = 'Amount must be digits only (integer cents).');
+              return;
+            }
+            if (!RegExp(r'^-?\d+$').hasMatch(sortRaw)) {
+              setState(() => _error = 'Sort order must be an integer.');
+              return;
+            }
+
+            final amountCents = int.tryParse(amountRaw);
+            final sortOrder = int.tryParse(sortRaw);
+            if (amountCents == null || amountCents < 0 || sortOrder == null) {
               setState(() => _error = 'Invalid values.');
               return;
             }
+
             Navigator.pop(
               context,
               DenominationPresetEditorResult(
                 entryType: _entryType,
                 label: label,
-                amountCents: amount,
-                sortOrder: sort,
+                amountCents: amountCents,
+                sortOrder: sortOrder,
                 isActive: _isActive,
               ),
             );
@@ -129,11 +173,5 @@ class _DenominationPresetEditorDialogState extends State<DenominationPresetEdito
         ),
       ],
     );
-  }
-
-  String _editableMoney(int cents) {
-    final d = cents ~/ 100;
-    final c = cents % 100;
-    return '$d.${c.toString().padLeft(2, '0')}';
   }
 }

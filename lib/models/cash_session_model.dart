@@ -4,6 +4,7 @@ class CashSessionModel {
     required this.sessionName,
     required this.businessDate,
     required this.startingBalanceCents,
+    required this.eftPosCents,
     required this.status,
     required this.createdAt,
     required this.closedAt,
@@ -13,6 +14,7 @@ class CashSessionModel {
   final String sessionName;
   final String businessDate;
   final int startingBalanceCents;
+  final int eftPosCents;
   final String status;
   final DateTime createdAt;
   final DateTime? closedAt;

@@ -72,6 +72,20 @@ class CsvExportService {
         '',
         DateTime.now().toIso8601String(),
       ],
+      <dynamic>[
+        'session',
+        session.sessionName,
+        session.businessDate,
+        'eft_pos',
+        'EFT POS',
+        _moneyFormatService.formatCents(session.eftPosCents),
+        1,
+        _moneyFormatService.formatCents(session.eftPosCents),
+        session.eftPosCents,
+        session.eftPosCents,
+        '',
+        DateTime.now().toIso8601String(),
+      ],
     ];
 
     for (final entry in entries) {

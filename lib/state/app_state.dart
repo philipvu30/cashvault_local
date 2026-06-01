@@ -40,8 +40,8 @@ class AppState extends ChangeNotifier {
 
   bool isReady = false;
   bool needsOwnerPasswordSetup = false;
-  bool isStartingBalanceUnlocked = false;
   bool isSaving = false;
+  int? activeSessionEftPosDraftCents;
 
   CashSessionModel? activeSession;
   List<CashEntryDraft> cashRows = <CashEntryDraft>[];
@@ -72,6 +72,7 @@ class AppState extends ChangeNotifier {
     );
     _sessionService = SessionService(
       sessionsRepository: _cashSessionsRepository!,
+      cashEntriesRepository: _cashEntriesRepository!,
       appSettingsRepository: _appSettingsRepository!,
       auditLogRepository: _auditLogRepository!,
     );
@@ -107,6 +108,7 @@ class AppState extends ChangeNotifier {
     if (activeSession != null) {
       final saved = await _cashEntriesRepository!.getBySessionId(activeSession!.id);
       _buildRowsFromPresetsAndSaved(saved);
+      activeSessionEftPosDraftCents = activeSession!.eftPosCents;
     }
 
     notifyListeners();
@@ -133,20 +135,6 @@ class AppState extends ChangeNotifier {
       currentPassword: currentPassword,
       newPassword: newPassword,
     );
-  }
-
-  Future<bool> unlockStartingBalance(String password) async {
-    final ok = await verifyOwnerPassword(password);
-    if (ok) {
-      isStartingBalanceUnlocked = true;
-      notifyListeners();
-    }
-    return ok;
-  }
-
-  void lockStartingBalance() {
-    isStartingBalanceUnlocked = false;
-    notifyListeners();
   }
 
   void addCustomRow(String entryType) {
@@ -201,6 +189,11 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateActiveSessionEftPosDraft(int cents) {
+    activeSessionEftPosDraftCents = cents < 0 ? 0 : cents;
+    notifyListeners();
+  }
+
   int get totalCashCents => cashRows.fold<int>(0, (sum, row) => sum + row.rowTotalCents);
   int get totalCoinCents => coinRows.fold<int>(0, (sum, row) => sum + row.rowTotalCents);
 
@@ -212,7 +205,7 @@ class AppState extends ChangeNotifier {
         totalCoinCents: totalCoinCents,
       );
 
-  Future<void> saveSessionData({int? editedStartingBalanceCents}) async {
+  Future<void> saveSessionData({int? editedEftPosCents}) async {
     final session = activeSession;
     if (session == null || !session.isOpen) return;
 
@@ -221,14 +214,11 @@ class AppState extends ChangeNotifier {
     notifyListeners();
 
     try {
-      if (isStartingBalanceUnlocked && editedStartingBalanceCents != null) {
-        if (editedStartingBalanceCents < 0) {
-          throw ArgumentError('Starting balance must be non-negative');
+      if (editedEftPosCents != null) {
+        if (editedEftPosCents < 0) {
+          throw ArgumentError('EFT POS must be non-negative');
         }
-        await _sessionService!.updateStartingBalance(
-          sessionId: session.id,
-          newStartingBalanceCents: editedStartingBalanceCents,
-        );
+        await _cashSessionsRepository!.updateEftPos(session.id, editedEftPosCents);
       }
 
       final merged = <CashEntryDraft>[...cashRows, ...coinRows];
@@ -241,7 +231,7 @@ class AppState extends ChangeNotifier {
           .toList();
 
       await _cashEntriesRepository!.replaceForSession(session.id, validRows);
-      isStartingBalanceUnlocked = false;
+      activeSessionEftPosDraftCents = editedEftPosCents ?? activeSessionEftPosDraftCents;
       await refresh();
     } catch (e) {
       errorMessage = e.toString();
@@ -343,13 +333,14 @@ class AppState extends ChangeNotifier {
   Future<void> startNewSession({
     required String sessionName,
     required String businessDate,
-    required int startingBalanceCents,
   }) async {
+    final startingBalanceCents = await _sessionService!.computeNextSessionStartingBalanceCents();
     activeSession = await _sessionService!.startNewSession(
       sessionName: sessionName,
       businessDate: businessDate,
       startingBalanceCents: startingBalanceCents,
     );
+    activeSessionEftPosDraftCents = 0;
     await refresh();
   }
 
@@ -376,6 +367,7 @@ class AppState extends ChangeNotifier {
     required String sessionName,
     required String businessDate,
     required int startingBalanceCents,
+    required int eftPosCents,
     required List<CashEntryModel> entries,
   }) async {
     await _cashSessionsRepository!.updateSessionFields(
@@ -383,6 +375,7 @@ class AppState extends ChangeNotifier {
       sessionName: sessionName,
       businessDate: businessDate,
       startingBalanceCents: startingBalanceCents,
+      eftPosCents: eftPosCents,
     );
     await _cashEntriesRepository!.replaceForSession(sessionId, entries);
   }

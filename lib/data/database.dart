@@ -60,6 +60,7 @@ class AppDatabase extends GeneratedDatabase {
         session_name TEXT NOT NULL,
         business_date TEXT NOT NULL,
         starting_balance_cents INTEGER NOT NULL,
+        eft_pos_cents INTEGER NOT NULL DEFAULT 0,
         status TEXT NOT NULL,
         created_at TEXT NOT NULL,
         closed_at TEXT
@@ -112,7 +113,19 @@ class AppDatabase extends GeneratedDatabase {
   }
 
   Future<void> _ensureLegacyCompatibility() async {
+    await _ensureCashSessionsEftPosColumn();
     await _migrateCashEntriesWithoutSessionId();
+  }
+
+  Future<void> _ensureCashSessionsEftPosColumn() async {
+    final columns = await selectMaps("PRAGMA table_info('cash_sessions')");
+    if (columns.isEmpty) return;
+    final names = columns.map((row) => row['name'] as String).toSet();
+    if (!names.contains('eft_pos_cents')) {
+      await customStatement(
+        'ALTER TABLE cash_sessions ADD COLUMN eft_pos_cents INTEGER NOT NULL DEFAULT 0;',
+      );
+    }
   }
 
   Future<void> _migrateCashEntriesWithoutSessionId() async {

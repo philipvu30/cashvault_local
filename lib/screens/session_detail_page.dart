@@ -34,7 +34,7 @@ class _SessionDetailPageState extends State<SessionDetailPage> {
 
   final _sessionNameController = TextEditingController();
   final _businessDateController = TextEditingController();
-  final _startingBalanceController = TextEditingController();
+  final _eftPosController = TextEditingController();
 
   List<CashEntryDraft> _cashRows = <CashEntryDraft>[];
   List<CashEntryDraft> _coinRows = <CashEntryDraft>[];
@@ -50,7 +50,7 @@ class _SessionDetailPageState extends State<SessionDetailPage> {
   void dispose() {
     _sessionNameController.dispose();
     _businessDateController.dispose();
-    _startingBalanceController.dispose();
+    _eftPosController.dispose();
     super.dispose();
   }
 
@@ -84,7 +84,7 @@ class _SessionDetailPageState extends State<SessionDetailPage> {
       _coinRows = coin;
       _sessionNameController.text = session.sessionName;
       _businessDateController.text = session.businessDate;
-      _startingBalanceController.text = _editableMoney(session.startingBalanceCents);
+      _eftPosController.text = _editableMoney(session.eftPosCents);
       _loading = false;
       _error = null;
     });
@@ -104,7 +104,8 @@ class _SessionDetailPageState extends State<SessionDetailPage> {
     }
     final session = _session!;
     final edit = _mode == SessionDetailMode.ownerEdit;
-    final startingBalanceCents = appState.moneyParserService.tryParseToCents(_startingBalanceController.text) ?? 0;
+    final startingBalanceCents = session.startingBalanceCents;
+    final eftPosCents = appState.moneyParserService.tryParseToCents(_eftPosController.text) ?? session.eftPosCents;
     final totalCash = _cashRows.fold<int>(0, (sum, row) => sum + row.rowTotalCents);
     final totalCoin = _coinRows.fold<int>(0, (sum, row) => sum + row.rowTotalCents);
     final finalTotal = startingBalanceCents + totalCash + totalCoin;
@@ -143,12 +144,18 @@ class _SessionDetailPageState extends State<SessionDetailPage> {
               const SizedBox(height: 16),
               AppCard(
                 title: 'Starting Balance',
+                child: Text(appState.moneyFormatService.formatCents(startingBalanceCents)),
+              ),
+              const SizedBox(height: 16),
+              AppCard(
+                title: 'EFT POS',
                 child: edit
                     ? TextField(
-                        controller: _startingBalanceController,
-                        decoration: const InputDecoration(labelText: 'Starting Balance', prefixText: '\$'),
+                        controller: _eftPosController,
+                        decoration: const InputDecoration(labelText: 'EFT POS', prefixText: '\$'),
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       )
-                    : Text(appState.moneyFormatService.formatCents(startingBalanceCents)),
+                    : Text(appState.moneyFormatService.formatCents(eftPosCents)),
               ),
               const SizedBox(height: 16),
               AppCard(
@@ -439,8 +446,8 @@ class _SessionDetailPageState extends State<SessionDetailPage> {
     try {
       final sessionName = _sessionNameController.text.trim();
       final businessDate = _businessDateController.text.trim();
-      final startingBalanceCents = appState.moneyParserService.tryParseToCents(_startingBalanceController.text);
-      if (sessionName.isEmpty || businessDate.isEmpty || startingBalanceCents == null || startingBalanceCents < 0) {
+      final eftPosCents = appState.moneyParserService.tryParseToCents(_eftPosController.text);
+      if (sessionName.isEmpty || businessDate.isEmpty || eftPosCents == null || eftPosCents < 0) {
         throw StateError('Invalid session info values');
       }
 
@@ -480,7 +487,8 @@ class _SessionDetailPageState extends State<SessionDetailPage> {
         sessionId: session.id,
         sessionName: sessionName,
         businessDate: businessDate,
-        startingBalanceCents: startingBalanceCents,
+        startingBalanceCents: session.startingBalanceCents,
+        eftPosCents: eftPosCents,
         entries: saveRows,
       );
       await appState.logAuditAction(

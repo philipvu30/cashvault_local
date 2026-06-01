@@ -16,6 +16,8 @@ class CashEntryRow extends StatelessWidget {
     required this.onAmountChanged,
     required this.onDelete,
     required this.isReadOnly,
+    required this.qtyFocusNode,
+    required this.nextQtyFocusNode,
   });
 
   final CashEntryDraft row;
@@ -26,6 +28,8 @@ class CashEntryRow extends StatelessWidget {
   final ValueChanged<int> onAmountChanged;
   final VoidCallback? onDelete;
   final bool isReadOnly;
+  final FocusNode qtyFocusNode;
+  final FocusNode? nextQtyFocusNode;
 
   @override
   Widget build(BuildContext context) {
@@ -62,14 +66,24 @@ class CashEntryRow extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: TextFormField(
+              focusNode: qtyFocusNode,
               initialValue: row.quantity == 0 ? '' : row.quantity.toString(),
               enabled: !isReadOnly,
               decoration: const InputDecoration(labelText: 'Qty'),
               keyboardType: TextInputType.number,
+              textInputAction: TextInputAction.next,
               inputFormatters: <TextInputFormatter>[
                 FilteringTextInputFormatter.digitsOnly,
               ],
               onChanged: (value) => onQuantityChanged(int.tryParse(value) ?? 0),
+              onFieldSubmitted: (_) {
+                final next = nextQtyFocusNode;
+                if (next != null) {
+                  FocusScope.of(context).requestFocus(next);
+                } else {
+                  qtyFocusNode.unfocus();
+                }
+              },
             ),
           ),
           const SizedBox(width: 8),

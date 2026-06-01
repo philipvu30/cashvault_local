@@ -5,7 +5,7 @@ import '../services/money_parser_service.dart';
 import '../state/cash_entries_state.dart';
 import 'cash_entry_row.dart';
 
-class CashEntryTable extends StatelessWidget {
+class CashEntryTable extends StatefulWidget {
   const CashEntryTable({
     super.key,
     required this.rows,
@@ -28,7 +28,54 @@ class CashEntryTable extends StatelessWidget {
   final bool readOnly;
 
   @override
+  State<CashEntryTable> createState() => _CashEntryTableState();
+}
+
+class _CashEntryTableState extends State<CashEntryTable> {
+  final List<FocusNode> _qtyNodes = <FocusNode>[];
+
+  @override
+  void initState() {
+    super.initState();
+    _syncNodes();
+  }
+
+  @override
+  void didUpdateWidget(covariant CashEntryTable oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.rows.length != widget.rows.length) {
+      _syncNodes();
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final node in _qtyNodes) {
+      node.dispose();
+    }
+    _qtyNodes.clear();
+    super.dispose();
+  }
+
+  void _syncNodes() {
+    final target = widget.rows.length;
+    if (_qtyNodes.length < target) {
+      final toAdd = target - _qtyNodes.length;
+      for (var i = 0; i < toAdd; i++) {
+        _qtyNodes.add(FocusNode());
+      }
+    } else if (_qtyNodes.length > target) {
+      final extras = _qtyNodes.sublist(target);
+      for (final node in extras) {
+        node.dispose();
+      }
+      _qtyNodes.removeRange(target, _qtyNodes.length);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    _syncNodes();
     return Column(
       children: <Widget>[
         const Row(
@@ -43,18 +90,20 @@ class CashEntryTable extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        ...rows.map(
-          (row) => CashEntryRow(
-            row: row,
-            moneyFormatService: moneyFormatService,
-            moneyParserService: moneyParserService,
-            onQuantityChanged: (value) => onQuantityChanged(row, value),
-            onLabelChanged: (value) => onLabelChanged(row, value),
-            onAmountChanged: (value) => onAmountChanged(row, value),
-            onDelete: () => onDeleteRow(row),
-            isReadOnly: readOnly,
-          ),
-        ),
+        ...widget.rows.asMap().entries.map(
+              (entry) => CashEntryRow(
+                row: entry.value,
+                moneyFormatService: widget.moneyFormatService,
+                moneyParserService: widget.moneyParserService,
+                onQuantityChanged: (value) => widget.onQuantityChanged(entry.value, value),
+                onLabelChanged: (value) => widget.onLabelChanged(entry.value, value),
+                onAmountChanged: (value) => widget.onAmountChanged(entry.value, value),
+                onDelete: () => widget.onDeleteRow(entry.value),
+                isReadOnly: widget.readOnly,
+                qtyFocusNode: _qtyNodes[entry.key],
+                nextQtyFocusNode: entry.key + 1 < _qtyNodes.length ? _qtyNodes[entry.key + 1] : null,
+              ),
+            ),
       ],
     );
   }

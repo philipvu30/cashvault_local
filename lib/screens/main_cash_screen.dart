@@ -6,10 +6,8 @@ import '../state/app_state.dart';
 import '../widgets/app_card.dart';
 import '../widgets/cash_entry_table.dart';
 import '../widgets/export_csv_dialog.dart';
-import '../widgets/money_input_field.dart';
 import '../widgets/new_session_dialog.dart';
 import '../widgets/owner_password_setup_dialog.dart';
-import '../widgets/password_dialog.dart';
 import '../widgets/session_header.dart';
 import '../widgets/summary_panel.dart';
 
@@ -21,11 +19,11 @@ class MainCashScreen extends StatefulWidget {
 }
 
 class _MainCashScreenState extends State<MainCashScreen> {
-  final _startingBalanceController = TextEditingController();
+  final _eftPosController = TextEditingController();
 
   @override
   void dispose() {
-    _startingBalanceController.dispose();
+    _eftPosController.dispose();
     super.dispose();
   }
 
@@ -46,10 +44,9 @@ class _MainCashScreenState extends State<MainCashScreen> {
           return const Scaffold(body: Center(child: Text('No active session')));
         }
         final canStartNewSession = !_isSameDate(session.createdAt, DateTime.now());
-
-        final startingBalanceText = _editableMoney(appState.startingBalanceCents);
-        if (_startingBalanceController.text != startingBalanceText) {
-          _startingBalanceController.text = startingBalanceText;
+        final eftPosText = _editableMoney(appState.activeSessionEftPosDraftCents ?? session.eftPosCents);
+        if (_eftPosController.text != eftPosText) {
+          _eftPosController.text = eftPosText;
         }
 
         return Scaffold(
@@ -85,8 +82,8 @@ class _MainCashScreenState extends State<MainCashScreen> {
                         onPressed: !session.isOpen || appState.isSaving
                             ? null
                             : () async {
-                                final cents = appState.moneyParserService.tryParseToCents(_startingBalanceController.text);
-                                await appState.saveSessionData(editedStartingBalanceCents: cents);
+                                final eftCents = appState.moneyParserService.tryParseToCents(_eftPosController.text);
+                                await appState.saveSessionData(editedEftPosCents: eftCents);
                                 if (!context.mounted) return;
                                 if (appState.errorMessage == null) {
                                   _showSnack(context, 'Session saved');
@@ -136,34 +133,23 @@ class _MainCashScreenState extends State<MainCashScreen> {
                   ),
                   const SizedBox(height: 16),
                   AppCard(
-                    title: 'Starting Balance',
+                    title: 'EFT POS',
                     child: Column(
                       children: <Widget>[
-                        MoneyInputField(
-                          controller: _startingBalanceController,
-                          parser: appState.moneyParserService,
-                          readOnly: !appState.isStartingBalanceUnlocked || !session.isOpen,
-                          labelText: 'Starting Balance',
-                        ),
-                        const SizedBox(height: 12),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: OutlinedButton(
-                            onPressed: !session.isOpen
-                                ? null
-                                : () async {
-                                    final password = await showDialog<String?>(
-                                      context: context,
-                                      builder: (_) => const PasswordDialog(title: 'Unlock Starting Balance'),
-                                    );
-                                    if (password == null) return;
-                                    final ok = await appState.unlockStartingBalance(password);
-                                    if (!ok && context.mounted) {
-                                      _showSnack(context, 'Invalid owner password');
-                                    }
-                                  },
-                            child: const Text('Edit Starting Balance'),
+                        TextField(
+                          controller: _eftPosController,
+                          enabled: session.isOpen,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          decoration: const InputDecoration(
+                            labelText: 'EFT POS',
+                            prefixText: '\$',
                           ),
+                          onChanged: (value) {
+                            final cents = appState.moneyParserService.tryParseToCents(value);
+                            if (cents != null) {
+                              appState.updateActiveSessionEftPosDraft(cents);
+                            }
+                          },
                         ),
                       ],
                     ),
@@ -236,16 +222,12 @@ class _MainCashScreenState extends State<MainCashScreen> {
   Future<void> _startNewSession(BuildContext context, AppState appState) async {
     final result = await showDialog<NewSessionDialogResult>(
       context: context,
-      builder: (_) => NewSessionDialog(
-        parser: appState.moneyParserService,
-        defaultStartingBalanceCents: appState.summary.finalTotalCents,
-      ),
+      builder: (_) => const NewSessionDialog(),
     );
     if (result == null) return;
     await appState.startNewSession(
       sessionName: result.sessionName,
       businessDate: result.businessDate,
-      startingBalanceCents: result.startingBalanceCents,
     );
   }
 

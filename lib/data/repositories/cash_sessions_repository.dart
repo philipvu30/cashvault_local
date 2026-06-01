@@ -98,6 +98,29 @@ class CashSessionsRepository {
     );
   }
 
+  Future<void> updateSessionFields({
+    required int sessionId,
+    required String sessionName,
+    required String businessDate,
+    required int startingBalanceCents,
+  }) {
+    return _database.execute(
+      '''
+      UPDATE cash_sessions
+      SET session_name = ?,
+          business_date = ?,
+          starting_balance_cents = ?
+      WHERE id = ?
+      ''',
+      <Object?>[
+        sessionName,
+        businessDate,
+        startingBalanceCents,
+        sessionId,
+      ],
+    );
+  }
+
   CashSessionModel _map(Map<String, Object?> row) {
     return CashSessionModel(
       id: row['id'] as int,

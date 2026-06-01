@@ -34,6 +34,7 @@ class CsvExportService {
     required CashSummaryModel summary,
     required String folderPath,
     required String filenameInput,
+    String auditAction = 'csv_exported',
   }) async {
     final filename = _sanitizeFilename(filenameInput);
     if (filename.isEmpty) {
@@ -144,7 +145,7 @@ class CsvExportService {
     await file.writeAsString(content, flush: true);
 
     await _appSettingsRepository.upsertSetting('last_export_folder', folderPath);
-    await _auditLogRepository.log('csv_exported', details: filePath);
+    await _auditLogRepository.log(auditAction, details: filePath);
     return filePath;
   }
 

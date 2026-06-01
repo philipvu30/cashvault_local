@@ -366,6 +366,67 @@ class AppState extends ChangeNotifier {
 
   Future<List<CashSessionModel>> allSessions() => _sessionService!.allSessions();
 
+  Future<CashSessionModel?> sessionById(int sessionId) => _cashSessionsRepository!.getById(sessionId);
+
+  Future<List<CashEntryModel>> entriesBySessionId(int sessionId) => _cashEntriesRepository!.getBySessionId(sessionId);
+
+  Future<void> updatePreviousSession({
+    required int sessionId,
+    required String sessionName,
+    required String businessDate,
+    required int startingBalanceCents,
+    required List<CashEntryModel> entries,
+  }) async {
+    await _cashSessionsRepository!.updateSessionFields(
+      sessionId: sessionId,
+      sessionName: sessionName,
+      businessDate: businessDate,
+      startingBalanceCents: startingBalanceCents,
+    );
+    await _cashEntriesRepository!.replaceForSession(sessionId, entries);
+  }
+
+  Future<void> logAuditAction(String action, {String? details}) {
+    return _auditLogRepository!.log(action, details: details);
+  }
+
+  Future<String> exportSelectedSessionCsv({
+    required int sessionId,
+    required String filenameInput,
+    required String folderPath,
+    String auditAction = 'previous_session_exported',
+  }) async {
+    final session = await _cashSessionsRepository!.getById(sessionId);
+    if (session == null) {
+      throw StateError('Session not found');
+    }
+    final entries = await _cashEntriesRepository!.getBySessionId(sessionId);
+    final totalCashCents = entries
+        .where((entry) => entry.entryType == 'cash')
+        .fold<int>(0, (sum, entry) => sum + entry.rowTotalCents);
+    final totalCoinCents = entries
+        .where((entry) => entry.entryType == 'coin')
+        .fold<int>(0, (sum, entry) => sum + entry.rowTotalCents);
+    final summary = CashSummaryModel(
+      startingBalanceCents: session.startingBalanceCents,
+      totalCashCents: totalCashCents,
+      totalCoinCents: totalCoinCents,
+    );
+    return _csvExportService!.exportSessionCsv(
+      session: session,
+      entries: entries,
+      summary: summary,
+      folderPath: folderPath,
+      filenameInput: filenameInput,
+      auditAction: auditAction,
+    );
+  }
+
+  Future<void> reopenPreviousSessionWithAudit(int sessionId) async {
+    await reopenSession(sessionId);
+    await _auditLogRepository!.log('previous_session_reopened', details: 'id=$sessionId');
+  }
+
   void _buildRowsFromPresetsAndSaved(List<CashEntryModel> savedModels) {
     final session = activeSession;
     if (session == null) {

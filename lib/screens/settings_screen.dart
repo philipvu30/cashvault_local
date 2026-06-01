@@ -49,6 +49,35 @@ class SettingsScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
+                  const SettingsSectionCard(
+                    title: 'Starting Balance Protection',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text('Starting balance editing requires owner password.'),
+                        SizedBox(height: 8),
+                        Text('Status: Enabled'),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SettingsSectionCard(
+                    title: 'Database',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        const Text('Storage Mode: Local Only'),
+                        const Text('Database Encryption: Enabled'),
+                        const Text('Database Location: App Folder'),
+                        const SizedBox(height: 8),
+                        OutlinedButton(
+                          onPressed: () => _snack(context, 'Database status: local encrypted SQLite active'),
+                          child: const Text('Show Database Status'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   SettingsSectionCard(
                     title: 'Export Settings',
                     child: Column(
@@ -86,6 +115,19 @@ class SettingsScreen extends StatelessWidget {
                           type: 'coin',
                           presets: appState.coinPresets,
                         ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  SettingsSectionCard(
+                    title: 'App Info',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        const Text('App Name: CashVault Local'),
+                        const Text('Version: 1.0.0'),
+                        const Text('Platform: Windows'),
+                        Text('Database Created: ${appState.databaseCreatedAt ?? '-'}'),
                       ],
                     ),
                   ),

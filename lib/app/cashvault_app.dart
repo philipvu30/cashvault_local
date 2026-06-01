@@ -12,7 +12,7 @@ class CashVaultApp extends StatelessWidget {
       title: 'CashVault Local',
       theme: buildCashVaultTheme(),
       initialRoute: AppRoutes.main,
-      routes: appRoutes,
+      onGenerateRoute: generateAppRoute,
       debugShowCheckedModeBanner: false,
     );
   }

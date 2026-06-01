@@ -74,7 +74,7 @@ class _MainCashScreenState extends State<MainCashScreen> {
                 padding: const EdgeInsets.all(16),
                 children: <Widget>[
                   AppCard(
-                    title: 'Current Session',
+                    title: 'Sessions',
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
@@ -94,6 +94,10 @@ class _MainCashScreenState extends State<MainCashScreen> {
                             OutlinedButton(
                               onPressed: session.isOpen ? () => _closeCurrentSession(context, appState) : null,
                               child: const Text('Close Current Session'),
+                            ),
+                            OutlinedButton(
+                              onPressed: () => Navigator.of(context).pushNamed(AppRoutes.previousSessions),
+                              child: const Text('View Previous Sessions'),
                             ),
                             FilledButton(
                               onPressed: !session.isOpen || appState.isSaving

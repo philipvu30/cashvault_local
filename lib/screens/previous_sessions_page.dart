@@ -84,7 +84,7 @@ class _PreviousSessionsPageState extends State<PreviousSessionsPage> {
       ),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1280, minWidth: 900),
+          constraints: const BoxConstraints(maxWidth: 1500, minWidth: 900),
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: <Widget>[
@@ -147,17 +147,20 @@ class _PreviousSessionsPageState extends State<PreviousSessionsPage> {
                         child: CircularProgressIndicator(),
                       )
                     else
-                      PreviousSessionsTable(
-                        rows: _filteredRows,
-                        moneyFormatService: appState.moneyFormatService,
-                        onView: (row) => _openDetail(
-                          row: row,
-                          mode: SessionDetailMode.readOnly,
-                          logViewed: true,
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: PreviousSessionsTable(
+                          rows: _filteredRows,
+                          moneyFormatService: appState.moneyFormatService,
+                          onView: (row) => _openDetail(
+                            row: row,
+                            mode: SessionDetailMode.readOnly,
+                            logViewed: true,
+                          ),
+                          onEdit: (row) => _openEdit(row),
+                          onExport: (row) => _exportRow(row),
+                          onReopen: (row) => _reopenRow(row),
                         ),
-                        onEdit: (row) => _openEdit(row),
-                        onExport: (row) => _exportRow(row),
-                        onReopen: (row) => _reopenRow(row),
                       ),
                     if (!_loading && _filteredRows.isEmpty)
                       Align(

@@ -157,9 +157,7 @@ class _PreviousSessionsPageState extends State<PreviousSessionsPage> {
                             mode: SessionDetailMode.readOnly,
                             logViewed: true,
                           ),
-                          onEdit: (row) => _openEdit(row),
                           onExport: (row) => _exportRow(row),
-                          onReopen: (row) => _reopenRow(row),
                         ),
                       ),
                     if (!_loading && _filteredRows.isEmpty)

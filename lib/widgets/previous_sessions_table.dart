@@ -10,17 +10,13 @@ class PreviousSessionsTable extends StatelessWidget {
     required this.rows,
     required this.moneyFormatService,
     required this.onView,
-    required this.onEdit,
     required this.onExport,
-    required this.onReopen,
   });
 
   final List<PreviousSessionListRow> rows;
   final MoneyFormatService moneyFormatService;
   final void Function(PreviousSessionListRow row) onView;
-  final void Function(PreviousSessionListRow row) onEdit;
   final void Function(PreviousSessionListRow row) onExport;
-  final void Function(PreviousSessionListRow row) onReopen;
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +61,7 @@ class PreviousSessionsTable extends StatelessWidget {
                 DataCell(SizedBox(width: 130, child: Text(session.closedAt == null ? '-' : _formatDateTime(session.closedAt!)))),
                 DataCell(
                   SizedBox(
-                    width: 300,
+                    width: 160,
                     child: Wrap(
                       spacing: 4,
                       runSpacing: 4,
@@ -76,19 +72,9 @@ class PreviousSessionsTable extends StatelessWidget {
                           child: const Text('View'),
                         ),
                         TextButton(
-                          onPressed: () => onEdit(row),
-                          style: TextButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 8)),
-                          child: const Text('Edit'),
-                        ),
-                        TextButton(
                           onPressed: () => onExport(row),
                           style: TextButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 8)),
                           child: const Text('Export CSV'),
-                        ),
-                        TextButton(
-                          onPressed: session.status == 'open' ? null : () => onReopen(row),
-                          style: TextButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 8)),
-                          child: const Text('Reopen'),
                         ),
                       ],
                     ),

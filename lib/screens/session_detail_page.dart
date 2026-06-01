@@ -284,10 +284,6 @@ class _SessionDetailPageState extends State<SessionDetailPage> {
                       ]
                     : <Widget>[
                         OutlinedButton(
-                          onPressed: _enableEditMode,
-                          child: const Text('Edit This Session'),
-                        ),
-                        OutlinedButton(
                           onPressed: _exportSession,
                           child: const Text('Export CSV'),
                         ),

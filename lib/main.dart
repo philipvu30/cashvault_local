@@ -1,21 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-void main() {
-  runApp(const CashVaultApp());
-}
+import 'app/cashvault_app.dart';
+import 'state/app_state.dart';
 
-class CashVaultApp extends StatelessWidget {
-  const CashVaultApp({super.key});
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final appState = AppState();
+  await appState.initialize();
 
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        body: Center(
-          child: Text('Cash Vault'),
-        ),
-      ),
-    );
-  }
+  runApp(
+    ChangeNotifierProvider<AppState>.value(
+      value: appState,
+      child: const CashVaultApp(),
+    ),
+  );
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../data/database.dart';
+import '../data/database_connection.dart';
 import '../data/repositories/app_settings_repository.dart';
 import '../data/repositories/audit_log_repository.dart';
 import '../data/repositories/auth_repository.dart';
@@ -53,6 +54,7 @@ class AppState extends ChangeNotifier {
   String? errorMessage;
 
   Future<void> initialize() async {
+    _prepareForInitialization();
     _database = await AppDatabase.open();
     _appSettingsRepository = AppSettingsRepository(_database!);
     _auditLogRepository = AuditLogRepository(_database!);
@@ -95,6 +97,20 @@ class AppState extends ChangeNotifier {
 
     isReady = true;
     notifyListeners();
+  }
+
+  Future<void> resetDatabaseForDebug() async {
+    if (!kDebugMode) {
+      throw StateError('Database reset is only available in debug mode');
+    }
+
+    final database = _database;
+    _prepareForInitialization();
+    notifyListeners();
+
+    await database?.close();
+    await deleteDatabaseFiles();
+    await initialize();
   }
 
   Future<void> refresh() async {
@@ -503,5 +519,31 @@ class AppState extends ChangeNotifier {
         isActive: true,
       );
     }
+  }
+
+  void _prepareForInitialization() {
+    isReady = false;
+    needsOwnerPasswordSetup = false;
+    isSaving = false;
+    activeSessionEftPosDraftText = null;
+    activeSession = null;
+    cashRows = <CashEntryDraft>[];
+    coinRows = <CashEntryDraft>[];
+    allPresets = <DenominationPresetModel>[];
+    lastExportFolder = null;
+    databaseCreatedAt = null;
+    errorMessage = null;
+
+    _database = null;
+    _appSettingsRepository = null;
+    _auditLogRepository = null;
+    _authRepository = null;
+    _cashEntriesRepository = null;
+    _cashSessionsRepository = null;
+    _denominationPresetsRepository = null;
+    _authService = null;
+    _csvExportService = null;
+    _denominationPresetService = null;
+    _sessionService = null;
   }
 }

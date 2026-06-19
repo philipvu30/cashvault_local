@@ -1,0 +1,11 @@
+section,session_name,business_date,type,label,amount,quantity,row_total,amount_cents,row_total_cents,comment,created_at
+session,Business Day 2026-06-20,2026-06-20,starting_balance,Starting Balance,$215.90,1,$215.90,21590,21590,,2026-06-20T16:00:06.373562
+session,Business Day 2026-06-20,2026-06-20,eft_pos,EFT POS,$0.00,1,$0.00,0,0,,2026-06-20T16:00:06.373562
+entries,Business Day 2026-06-20,2026-06-20,cash,$20 Note,$20.00,3,$60.00,2000,6000,,2026-06-20T15:59:48.883098
+entries,Business Day 2026-06-20,2026-06-20,coin,$2 Coin,$2.00,5,$10.00,200,1000,,2026-06-20T15:59:48.885598
+entries,Business Day 2026-06-20,2026-06-20,coin,$1 Coin,$1.00,5,$5.00,100,500,,2026-06-20T15:59:48.888099
+entries,Business Day 2026-06-20,2026-06-20,coin,50c Coin,$0.50,5,$2.50,50,250,,2026-06-20T15:59:48.890607
+entries,Business Day 2026-06-20,2026-06-20,coin,20c Coin,$0.20,4,$0.80,20,80,,2026-06-20T15:59:48.893118
+totals,Business Day 2026-06-20,2026-06-20,total_cash_notes,Total Cash Notes,,,$60.00,,6000,,2026-06-20T16:00:06.373562
+totals,Business Day 2026-06-20,2026-06-20,total_coins,Total Coins,,,$18.30,,1830,,2026-06-20T16:00:06.373562
+totals,Business Day 2026-06-20,2026-06-20,final_total,Final Total,,,$78.30,,7830,,2026-06-20T16:00:06.373562

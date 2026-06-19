@@ -9,5 +9,5 @@ class CashSummaryModel {
   final int totalCashCents;
   final int totalCoinCents;
 
-  int get finalTotalCents => startingBalanceCents + totalCashCents + totalCoinCents;
+  int get finalTotalCents => totalCashCents + totalCoinCents;
 }

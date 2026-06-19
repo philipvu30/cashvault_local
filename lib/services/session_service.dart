@@ -40,10 +40,11 @@ class SessionService {
     final now = DateTime.now();
     final businessDate =
         '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final startingBalanceCents = await computeNextSessionStartingBalanceCents();
     final sessionId = await _sessionsRepository.createSession(
       sessionName: "Today's Business Day",
       businessDate: businessDate,
-      startingBalanceCents: 0,
+      startingBalanceCents: startingBalanceCents,
     );
     await _appSettingsRepository.upsertSetting('active_session_id', sessionId.toString());
     await _auditLogRepository.log('session_created', details: 'id=$sessionId');
@@ -102,7 +103,7 @@ class SessionService {
     final sessions = await _sessionsRepository.getAllSessions();
     final closed = sessions.where((session) => session.status == 'closed').toList();
     if (closed.isEmpty) {
-      return 0;
+      return 20000;
     }
 
     final latestClosed = closed.first;

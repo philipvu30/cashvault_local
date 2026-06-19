@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -112,6 +113,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ],
                     ),
                   ),
+                  if (kDebugMode) ...<Widget>[
+                    const SizedBox(height: 16),
+                    SettingsSectionCard(
+                      title: 'Debug Tools',
+                      subtitle: 'Only shown in debug builds. Clears local database and recreates default app state.',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          const Text('Danger: this permanently removes all local sessions, password, labels, and settings.'),
+                          const SizedBox(height: 8),
+                          FilledButton.tonal(
+                            onPressed: () => _clearDatabase(context, appState),
+                            style: FilledButton.styleFrom(foregroundColor: Colors.red),
+                            child: const Text('Clear Debug Database'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   SettingsSectionCard(
                     title: 'Labels / Denominations',
@@ -236,6 +256,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       newPassword: data.newPassword,
       confirmPassword: data.confirmPassword,
     );
+    if (!context.mounted) return;
     _snack(context, ok ? 'Owner password updated' : 'Failed to update owner password');
   }
 
@@ -300,6 +321,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _snack(context, e.toString().replaceFirst('Bad state: ', ''));
       }
     }
+  }
+
+  Future<void> _clearDatabase(BuildContext context, AppState appState) async {
+    if (!_isAuthenticated || !kDebugMode) return;
+    final navigator = Navigator.of(context);
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Clear Debug Database'),
+        content: const Text('Delete all local data and recreate a fresh debug database? This cannot be undone.'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Clear Database'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    await appState.resetDatabaseForDebug();
+    if (!mounted) return;
+    navigator.popUntil((route) => route.isFirst);
   }
 
   void _snack(BuildContext context, String message) {

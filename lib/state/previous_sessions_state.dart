@@ -11,7 +11,7 @@ class PreviousSessionListRow {
   final int totalCashCents;
   final int totalCoinCents;
 
-  int get finalTotalCents => session.startingBalanceCents + totalCashCents + totalCoinCents;
+  int get finalTotalCents => totalCashCents + totalCoinCents;
 }
 
 class PreviousSessionsState {
